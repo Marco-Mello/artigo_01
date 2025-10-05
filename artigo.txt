@@ -1,0 +1,28 @@
+1) Procurar as letra mais frequentes
+2) Na lingua inglesa, as teminações como -ing e -ed são mais comuns (procurar artigo)
+3) Com as letrar mais frequentes, procurar palavras onde essa vogal seja a antepenultima letra da palavra(ing) ou penultima letra (ed)
+4) Quais palavras mais utilizadas no ingles ? (procurar artigo)
+5) Método de Análise de Frequência (procurar artigo)
+
+
+
+https://www.overleaf.com/latex/templates/ieee-conference-template/grfzhhncsfqn
+
+
+
+Dicas dadas:
+
+A mensagem está contida dentro de um arquivo .txt onde cada letra da mensagem está em formato binário 8 bits (1 byte), ou seja, o arquivo .txt represeta uma memória onde cada uma das sua posicões representa um valor em ASCII 8 bits.
+
+
+
+
+--- Cifra de substitução monoalfabética
+	
+Filme: O Jogo da Imitação
+
+
+https://norvig.com/mayzner.html
+videos:  Criptografia: das origens à obra de Edgard Alan Poe - https://www.youtube.com/watch?v=Kw5msUWSIms
+
+
