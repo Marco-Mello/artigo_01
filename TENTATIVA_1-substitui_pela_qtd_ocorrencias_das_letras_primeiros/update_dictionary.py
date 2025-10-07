@@ -1,0 +1,31 @@
+# -*- coding: utf-8 -*-
+# Dicionário consolidado gerado por comparar_e_atualizar()
+
+update_map = {
+    'A': 'N',
+    'B': 'Y',
+    'C': 'R',
+    'D': 'Y',
+    'E': 'Q',
+    'F': 'Z',
+    'G': 'A',
+    'H': 'V',
+    'I': 'A',
+    'J': 'M',
+    'K': 'D',
+    'L': 'K',
+    'M': 'H',
+    'N': 'N',
+    'O': 'E',
+    'P': 'X',
+    'Q': 'W',
+    'R': 'H',
+    'S': 'L',
+    'T': 'I',
+    'U': 'C',
+    'V': 'X',
+    'W': 'O',
+    'X': 'G',
+    'Y': 'S',
+    'Z': 'A',
+}
