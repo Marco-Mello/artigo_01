@@ -22,7 +22,7 @@ A mensagem está contida dentro de um arquivo .txt onde cada letra da mensagem e
 Filme: O Jogo da Imitação
 
 
-https://norvig.com/mayzner.html (nao foi suficiente, precisei aumentar meu banco de top words)
+https://norvig.com/mayzner.html (nao foi suficiente, precisei aumentar meu banco de top words) --->>> https://www.englishexperts.com.br/wp-content/uploads/downloads/as-palavras-mais-comuns-da-lingua-inglesa.pdf
 videos:  Criptografia: das origens à obra de Edgard Alan Poe - https://www.youtube.com/watch?v=Kw5msUWSIms
 
 2. Cifra com chave (Vigenère, por exemplo)
@@ -30,5 +30,10 @@ Se as letras estão sendo deslocadas por valores diferentes dependendo da posiç
 Nesse caso:
 Cada letra da chave define um deslocamento (A=0, B=1, …, Z=25).
 Assim, V→T e O→E podem ter deslocamentos diferentes — faz sentido e é padrão dentro desse tipo de cifra.
+
+
+
+TENTADO: primeiro substituir as letras de maior ocorrencia na lingua ingles
+
 
 
