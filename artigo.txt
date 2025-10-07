@@ -22,7 +22,7 @@ A mensagem está contida dentro de um arquivo .txt onde cada letra da mensagem e
 Filme: O Jogo da Imitação
 
 
-https://norvig.com/mayzner.html
+https://norvig.com/mayzner.html (nao foi suficiente, precisei aumentar meu banco de top words)
 videos:  Criptografia: das origens à obra de Edgard Alan Poe - https://www.youtube.com/watch?v=Kw5msUWSIms
 
 2. Cifra com chave (Vigenère, por exemplo)
