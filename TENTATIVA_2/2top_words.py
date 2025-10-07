@@ -1,4 +1,4 @@
-english_rank = {
+top_words_english_rank = {
     "THE": 1,
     "OF": 2,
     "AND": 3,
