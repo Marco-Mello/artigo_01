@@ -1,4 +1,6 @@
 import re
+import time
+import sys
 from collections import Counter
 
 # importa o dicionário de ranking (não usado nesta versão)
@@ -8,7 +10,21 @@ except Exception:
     english_rank = {}
 
 # ===============================
-# DICIONÁRIO ASCII (mantido)
+# Função auxiliar: barra de progresso
+# ===============================
+def barra_progresso(duracao=1, largura=20):
+    etapas = 20
+    intervalo = duracao / etapas
+    for i in range(etapas + 1):
+        porcentagem = int((i / etapas) * 100)
+        barra = "█" * i + "-" * (largura - i)
+        sys.stdout.write(f"\r   [{barra}] {porcentagem}%")
+        sys.stdout.flush()
+        time.sleep(intervalo)
+    print()  # quebra de linha ao final
+
+# ===============================
+# DICIONÁRIO ASCII
 # ===============================
 ascii_dict = {
     "00100000": " ",  # espaço
@@ -41,33 +57,38 @@ ascii_dict = {
 # ===============================
 def processar_encoded_file(path="encoded.txt"):
     try:
+        print("1 - Lendo o arquivo encoded.txt...")
+        barra_progresso()
+
         with open(path, "r", encoding="utf-8") as f:
             linhas = f.readlines()
 
-        # Converter para blocos de 8 bits e decodificar
+        print("2 - Decodificando os valores de binário pra ASCII")
+        barra_progresso()
+
         todas_linhas_8bits = [[p.zfill(8) for p in re.split(r'\s+', l.strip()) if p] for l in linhas]
         texto_decodificado_linhas = ["".join(ascii_dict.get(p, '?') for p in linha_bits) for linha_bits in todas_linhas_8bits]
-
-        # Extrair palavras
         tokens = [t for linha in texto_decodificado_linhas for t in re.split(r'\s+', linha.strip()) if t]
 
-        # Salvar encoded_message.txt (texto decodificado original)
+        print("3 - Gerando arquivo encoded_message.txt...")
+        barra_progresso()
         with open("encoded_message.txt", "w", encoding="utf-8") as f:
             for token in tokens:
                 f.write(f"{token}\n")
 
-        # Contar ocorrências
+        print("4 - Contando frequência e ordenando palavras...")
+        barra_progresso()
         cont = Counter(tokens)
-
-        # Ordenar: 1) comprimento (menor → maior), 2) frequência (maior → menor), 3) alfabética
         tokens_ordenados = sorted(tokens, key=lambda x: (len(x), -cont[x], x.lower()))
 
-        # Salvar tudo no encoded_message_sorted.txt
+        print("5 - Criando arquivo encoded_message_sorted.txt...")
+        barra_progresso()
         with open("encoded_message_sorted.txt", "w", encoding="utf-8") as f:
             for token in tokens_ordenados:
                 f.write(f"{token}\n")
 
-        print("✅ Arquivos 'encoded_message.txt' e 'encoded_message_sorted.txt' criados com sucesso!")
+        # Etapa final sem barra
+        print("6 - Processo finalizado com sucesso!")
 
     except FileNotFoundError:
         print(f"❌ ERRO: O arquivo '{path}' não foi encontrado.")
