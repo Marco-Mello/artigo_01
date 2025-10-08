@@ -1,17 +1,20 @@
 # decrypt.py
 # Use:
 #   py decrypt.py        -> modo normal (silencioso)
-#   py decrypt.py -debug -> modo debug (tabelas interativas; imprime final em MAIÚSCULAS, 3 linhas antes)
+#   py decrypt.py -debug -> modo debug (tabelas interativas; imprime final MAIÚSCULAS com 3 linhas antes)
+# Ao final: move arquivos gerados para uma pasta ARQUIVOS_GERADOS_YYYY-MM-DD_HH-MM-SS/
 
 import os
 import re
 import sys
 import time
+import shutil
 import importlib.util
+from datetime import datetime
 from collections import Counter, OrderedDict, defaultdict
 
 # ---------------------------
-# Parte A (decodificação) - mantém prints originais
+# PARTE A: mapeamento ASCII (mantém seus prints)
 # ---------------------------
 ascii_dict = {
     "00100000": " ",
@@ -56,41 +59,33 @@ def processar_encoded_file(path="encoded.txt"):
         barra_progresso()
         with open(path, "r", encoding="utf-8") as f:
             linhas = f.readlines()
-
         print("2 - Decodificando os valores de binário pra ASCII")
         barra_progresso()
-
         todas_linhas_8bits = [[p.zfill(8) for p in re.split(r'\s+', l.strip()) if p] for l in linhas]
         texto_decodificado_linhas = ["".join(ascii_dict.get(p, '?') for p in linha_bits) for linha_bits in todas_linhas_8bits]
         tokens = [t for linha in texto_decodificado_linhas for t in re.split(r'\s+', linha.strip()) if t]
-
         print("3 - Gerando arquivo encoded_message.txt...")
         barra_progresso()
         with open("encoded_message.txt", "w", encoding="utf-8") as f:
             for token in tokens:
                 f.write(f"{token}\n")
-
         print("4 - Contando frequência e ordenando palavras...")
         barra_progresso()
         cont = Counter(tokens)
         tokens_ordenados = sorted(tokens, key=lambda x: (len(x), -cont[x], x.lower()))
-
         print("5 - Criando arquivo encoded_message_sorted.txt...")
         barra_progresso()
         with open("encoded_message_sorted.txt", "w", encoding="utf-8") as f:
             for token in tokens_ordenados:
                 f.write(f"{token}\n")
-
-        # 3 linhas em branco antes da Parte B
         print("6 - Processo finalizado com sucesso!\n\n\n")
-
     except FileNotFoundError:
         print(f"❌ ERRO: O arquivo '{path}' não foi encontrado.")
     except Exception as e:
         print(f"⚠️ Ocorreu um erro no código A: {e}")
 
 # ---------------------------
-# Helpers comuns a B
+# FUNÇÕES AUXILIARES COMUNS (definidas antes do uso)
 # ---------------------------
 def contar_ascii_21_7E(token: str) -> int:
     return sum(1 for c in token if 0x21 <= ord(c) <= 0x7E) if token else 0
@@ -105,40 +100,24 @@ def carregar_dict_de_arquivo(filepath, varname):
         obj = getattr(mod, varname, {})
         if isinstance(obj, dict):
             return OrderedDict(obj)
-        else:
-            print(f"⚠️ Aviso: variável '{varname}' em '{filepath}' não é dict. Ignorando.")
-            return OrderedDict()
-    except Exception as e:
-        print(f"⚠️ Erro ao carregar '{filepath}': {e}", file=sys.stderr)
+        return OrderedDict()
+    except Exception:
         return OrderedDict()
 
 def carregar_tokens_agrupados(sorted_path="encoded_message_sorted.txt"):
     if not os.path.isfile(sorted_path):
-        print(f"❌ ERRO: '{sorted_path}' não encontrado.", file=sys.stderr)
         return {}, []
-    tokens = []
-    seen = set()
+    tokens, seen = [], set()
     with open(sorted_path, "r", encoding="utf-8") as f:
         for line in f:
-            t = line.rstrip("\n\r")
-            if t is None:
-                continue
-            t = t.strip()
-            if t == "":
-                continue
-            if t in seen:
-                continue
-            seen.add(t)
-            tokens.append(t)
+            t = line.strip()
+            if t and t not in seen:
+                seen.add(t)
+                tokens.append(t)
     grupos = defaultdict(list)
-    lengths_order = []
     for t in tokens:
-        c = contar_ascii_21_7E(t)
-        if c not in grupos:
-            lengths_order.append(c)
-        grupos[c].append(t)
-    lengths_order = sorted(set(lengths_order))
-    return grupos, lengths_order
+        grupos[contar_ascii_21_7E(t)].append(t)
+    return grupos, sorted(grupos.keys())
 
 def mapping_conflicts_bidirectional(src_token, tgt_token, current_map):
     rev = {v: k for k, v in current_map.items()}
@@ -146,15 +125,12 @@ def mapping_conflicts_bidirectional(src_token, tgt_token, current_map):
         t_ch = tgt_token[i]
         if s_ch in current_map and current_map[s_ch] != t_ch:
             return True, ("origin_mapped", s_ch, current_map[s_ch], t_ch)
-        if t_ch in rev:
-            existing_src = rev[t_ch]
-            if existing_src != s_ch:
-                return True, ("target_taken", t_ch, existing_src, s_ch)
+        if t_ch in rev and rev[t_ch] != s_ch:
+            return True, ("target_taken", t_ch, rev[t_ch], s_ch)
     return False, None
 
 def aplicar_mapa_e_escrever_preservando_case(input_path, output_path, mapa):
     if not os.path.isfile(input_path):
-        print(f"❌ ERRO: '{input_path}' não encontrado.", file=sys.stderr)
         return False
     try:
         with open(input_path, "r", encoding="utf-8") as fin, open(output_path, "w", encoding="utf-8") as fout:
@@ -167,8 +143,20 @@ def aplicar_mapa_e_escrever_preservando_case(input_path, output_path, mapa):
                         out_chars.append(c)
                 fout.write("".join(out_chars))
         return True
-    except Exception as e:
-        print(f"⚠️ Erro ao gravar '{output_path}': {e}", file=sys.stderr)
+    except Exception:
+        return False
+
+def salvar_mapping_py(path, mapa, varname="mapping"):
+    try:
+        with open(path, "w", encoding="utf-8") as f:
+            f.write(f"# Auto-gerado: mapa de substituição (origem -> alvo)\n{varname} = {{\n")
+            for k, v in mapa.items():
+                k_esc = k.replace("'", "\\'")
+                v_esc = v.replace("'", "\\'")
+                f.write(f"    '{k_esc}': '{v_esc}',\n")
+            f.write("}\n")
+        return True
+    except Exception:
         return False
 
 def contar_ocorrencias_por_origem(path, mapa):
@@ -182,45 +170,6 @@ def contar_ocorrencias_por_origem(path, mapa):
                     counts[c] = counts.get(c, 0) + 1
     return counts
 
-def salvar_mapping_py(path, mapa, varname="mapping"):
-    try:
-        with open(path, "w", encoding="utf-8") as f:
-            f.write(f"# Auto-gerado: mapa de substituição (origem -> alvo)\n{varname} = {{\n")
-            for k, v in mapa.items():
-                k_esc = k.replace("'", "\\'")
-                v_esc = v.replace("'", "\\'")
-                f.write(f"    '{k_esc}': '{v_esc}',\n")
-            f.write("}\n")
-        return True
-    except Exception as e:
-        print(f"⚠️ Falha ao salvar {path}: {e}", file=sys.stderr)
-        return False
-
-# ---------------------------
-# Print helpers finais (modo normal)
-# ---------------------------
-def print_decifrado_corrido_duplo(filepath):
-    if not os.path.isfile(filepath):
-        return
-    with open(filepath, "r", encoding="utf-8") as f:
-        content = f.read().replace("\r", " ").replace("\n", " ")
-    # imprime corrido + duas linhas em branco
-    sys.stdout.write(content + "\n\n")
-    sys.stdout.flush()
-
-def print_final_em_maiusculo(filepath):
-    if not os.path.isfile(filepath):
-        print("(encoded_DECIFRADO.txt não encontrado)")
-        return
-    with open(filepath, "r", encoding="utf-8") as f:
-        content = f.read().replace("\r", " ").replace("\n", " ")
-    print("\n\nFinalizado com sucesso!!!\n\n")
-    print(content.upper())
-
-# ---------------------------
-# small helper used by debug get attribution string
-# (placed here so it's available when used)
-# ---------------------------
 def build_attribution(src_token, tgt_token):
     if not src_token or not tgt_token:
         return "-"
@@ -234,7 +183,76 @@ def build_attribution(src_token, tgt_token):
     return ", ".join(pairs)
 
 # ---------------------------
-# Modo silencioso (NÃO MODIFICAR)
+# PRINTS FINAIS E MOVIMENTAÇÃO (COM TIMESTAMP)
+# ---------------------------
+def print_decifrado_corrido_duplo(filepath):
+    if not os.path.isfile(filepath):
+        return
+    with open(filepath, "r", encoding="utf-8") as f:
+        content = f.read().replace("\r", " ").replace("\n", " ")
+    sys.stdout.write(content + "\n\n")
+    sys.stdout.flush()
+
+def print_final_em_maiusculo(filepath):
+    if not os.path.isfile(filepath):
+        print("(encoded_DECIFRADO.txt não encontrado)")
+        return
+    with open(filepath, "r", encoding="utf-8") as f:
+        content = f.read().replace("\r", " ").replace("\n", " ")
+    print("\n\nFinalizado com sucesso!!!\n\n")
+    print(content.upper())
+
+def print_final_decifrado_debug(filepath):
+    if not os.path.isfile(filepath):
+        print("(encoded_DECIFRADO.txt não encontrado)")
+        return
+    with open(filepath, "r", encoding="utf-8") as f:
+        content = f.read().replace("\r", " ").replace("\n", " ")
+    sys.stdout.write("\n\n\n" + content.upper() + "\n")
+    sys.stdout.flush()
+
+def mover_arquivos_gerados():
+    """
+    Move arquivos gerados para ARQUIVOS_GERADOS_YYYY-MM-DD_HH-MM-SS/
+    e grava um log movidos_YYYY-MM-DD_HH-MM-SS.txt dentro da pasta.
+    Mantém apenas os 'principais' na raiz.
+    """
+    principais = {"decrypt.py", "encoded.txt", "1word_counts.py", "2top_words.py"}
+    ts = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+    destino = f"ARQUIVOS_GERADOS_{ts}"
+    os.makedirs(destino, exist_ok=True)
+
+    movidos = []
+    for nome in os.listdir("."):
+        # skip diretórios e main script files
+        if nome in principais:
+            continue
+        if os.path.isdir(nome):
+            # não mover a própria pasta de destino se por algum motivo existir
+            if nome.startswith("ARQUIVOS_GERADOS"):
+                continue
+            else:
+                continue
+        # mover apenas arquivos
+        try:
+            shutil.move(nome, os.path.join(destino, nome))
+            movidos.append(nome)
+        except Exception as e:
+            print(f"⚠️ Falha ao mover {nome}: {e}")
+
+    # escrever log com listagem dos movidos
+    log_name = f"movidos_{ts}.txt"
+    try:
+        with open(os.path.join(destino, log_name), "w", encoding="utf-8") as lf:
+            lf.write(f"Timestamp: {ts}\n")
+            lf.write("Arquivos movidos:\n")
+            for m in movidos:
+                lf.write(m + "\n")
+    except Exception as e:
+        print(f"⚠️ Falha ao gravar log de movidos: {e}")
+
+# ---------------------------
+# MODO SILENCIOSO (NÃO MODIFICAR)
 # ---------------------------
 def executar_codigo_b_silent():
     # remove previous snapshot if present
@@ -252,7 +270,7 @@ def executar_codigo_b_silent():
 
     mapa = OrderedDict()
     next_token_index = {l: 0 for l in lengths_order}
-    token_candidate_pos = {}  # token -> pos
+    token_candidate_pos = {}
     exhausted_lengths = set()
     used_target_words = set()
 
@@ -268,7 +286,6 @@ def executar_codigo_b_silent():
                 continue
             token = candidates[idx]
             pos = token_candidate_pos.get(token, 0)
-            # buscar pos-ésimo candidato respeitando used_target_words
             cand = None
             idx_cand = 0
             for d in (dict1, dict2):
@@ -296,10 +313,12 @@ def executar_codigo_b_silent():
                 continue
 
             # ACEITO
-            for s_ch, t_ch in zip(token, cand):
-                if s_ch not in mapa:
-                    mapa[s_ch] = t_ch
-                    nova_atribuicao = True
+            for i, s_ch in enumerate(token):
+                t_ch = cand[i]
+                if s_ch in mapa:
+                    continue
+                mapa[s_ch] = t_ch
+                nova_atribuicao = True
 
             used_target_words.add(cand)
             token_candidate_pos.pop(token, None)
@@ -311,46 +330,29 @@ def executar_codigo_b_silent():
             aplicar_mapa_e_escrever_preservando_case("encoded_message.txt", "encoded_DECIFRADO.txt", mapa)
             print_decifrado_corrido_duplo("encoded_DECIFRADO.txt")
         else:
-            # evitar busy loop
             time.sleep(0.01)
 
     # finalização
     aplicar_mapa_e_escrever_preservando_case("encoded_message.txt", "encoded_DECIFRADO.txt", mapa)
     print_final_em_maiusculo("encoded_DECIFRADO.txt")
     salvar_mapping_py("mapping.py", mapa)
+    mover_arquivos_gerados()
 
 # ---------------------------
-# Função utilitária de tabela (para debug)
+# MODO DEBUG (mantém tabelas originais; só imprime quando houve atribuição)
 # ---------------------------
 def print_table(rows, headers):
-    cols = len(headers)
-    col_widths = [len(h) for h in headers]
-    for r in rows:
-        for i in range(cols):
-            col_widths[i] = max(col_widths[i], len(str(r[i])))
+    if not rows:
+        widths = [len(h) for h in headers]
+    else:
+        widths = [max(len(str(h)), max(len(str(r[i])) for r in rows)) for i, h in enumerate(headers)]
     sep = " | "
-    line_sep = "-+-".join("-" * w for w in col_widths)
     print()
-    print(sep.join(h.ljust(col_widths[i]) for i, h in enumerate(headers)))
-    print(line_sep)
+    print(sep.join(h.ljust(widths[i]) for i, h in enumerate(headers)))
+    print("-+-".join("-" * w for w in widths))
     for r in rows:
-        print(sep.join(str(r[i]).ljust(col_widths[i]) for i in range(cols)))
+        print(sep.join(str(r[i]).ljust(widths[i]) for i in range(len(headers))))
     print()
-
-# ---------------------------
-# Modo DEBUG: mantém tabelas originais, imprime tabela+snapshot+pause
-# apenas quando a passada tiver nova atribuição; ao final pula 3 linhas e
-# imprime todo o conteúdo corrido em MAIÚSCULAS.
-# ---------------------------
-def print_final_decifrado_debug(filepath):
-    if not os.path.isfile(filepath):
-        print("(encoded_DECIFRADO.txt não encontrado)")
-        return
-    with open(filepath, "r", encoding="utf-8") as f:
-        content = f.read().replace("\r", " ").replace("\n", " ")
-    # pula 3 linhas antes e imprime tudo em maiúsculas em uma linha
-    sys.stdout.write("\n\n\n" + content.upper() + "\n")
-    sys.stdout.flush()
 
 def executar_codigo_b_debug():
     print("1 - Carregando tokens de 'encoded_message_sorted.txt' ...")
@@ -373,17 +375,15 @@ def executar_codigo_b_debug():
     dict2 = carregar_dict_de_arquivo("2top_words.py", "top_words_english_rank")
     print(f"   Itens carregados (2): {len(dict2)}")
 
-    # estado
     mapa = OrderedDict()
     next_token_index = {length: 0 for length in lengths_order}
-    token_candidate_pos = {}  # token -> int
+    token_candidate_pos = {}
     exhausted_lengths = set()
     used_target_words = set()
 
     print("\n4 - Construindo mapa incremental (uma tentativa por comprimento por passada, mantendo candidato por token)...")
     round_idx = 0
 
-    # continuar até todos os comprimentos esgotados
     while not all(length in exhausted_lengths for length in lengths_order):
         round_idx += 1
         progress_made = False
@@ -404,7 +404,6 @@ def executar_codigo_b_debug():
             token_to_try = candidates[idx]
             pos = token_candidate_pos.get(token_to_try, 0)
 
-            # buscar pos-ésimo candidato respeitando used_target_words
             cand = None
             idx_cand = 0
             for d in (dict1, dict2):
@@ -470,15 +469,12 @@ def executar_codigo_b_debug():
                 rows.append((length, "-", "-", "-", "ESGOTADO", "após aceitação", "-"))
 
             progress_made = True
-            # segue para próximo comprimento
 
-        # Somente imprimir tabela, snapshot e pausa se progress_made for True
         if progress_made:
             print(f"\n   Passada #{round_idx} sobre comprimentos...")
             headers = ["Compr.", "Token", "Candidate", "Fonte", "Resultado", "Detalhe", "Atribuição"]
             print_table(rows, headers)
 
-            # grava snapshot parcial
             print("   Gravando snapshot parcial em 'encoded_DECIFRADO.txt' com o mapa atual...")
             if aplicar_mapa_e_escrever_preservando_case("encoded_message.txt", "encoded_DECIFRADO.txt", mapa):
                 print("   → arquivo 'encoded_DECIFRADO.txt' atualizado (parcial).")
@@ -490,7 +486,6 @@ def executar_codigo_b_debug():
             else:
                 print("\n   Passada terminou com pelo menos uma aceitação.")
 
-            # pausa interativa se ainda houver comprimentos não esgotados
             if not all(length in exhausted_lengths for length in lengths_order):
                 try:
                     input("\n   Pressione Enter para continuar para a próxima passada (ou Ctrl+C para sair)...")
@@ -498,10 +493,10 @@ def executar_codigo_b_debug():
                     print("\n   Interrompido pelo usuário. Saindo.")
                     return
         else:
-            # sem progressos nesta passada -> não imprime nem pausa, continua imediatamente
+            # sem progresso nesta passada: segue imediatamente
             pass
 
-    # resumo do mapa
+    # resumo e relatório
     print("\n5 - Mapa final construído:")
     if not mapa:
         print("   (vazio) nenhum mapeamento possível.")
@@ -514,7 +509,6 @@ def executar_codigo_b_debug():
             if shown >= 200:
                 break
 
-    # relatório de ocorrências previstas
     print("\n6 - Contando ocorrências previstas no original...")
     barra_progresso(duracao=0.3, prefix="   etapa 6")
     occ = contar_ocorrencias_por_origem("encoded_message.txt", mapa)
@@ -524,14 +518,12 @@ def executar_codigo_b_debug():
         for k, v in occ.items():
             print(f"     {k!r}: {v}")
 
-    # última gravação final (garante estado final)
     print("\n7 - Gravando resultado final em 'encoded_DECIFRADO.txt' ...")
     if aplicar_mapa_e_escrever_preservando_case("encoded_message.txt", "encoded_DECIFRADO.txt", mapa):
         print("   → arquivo 'encoded_DECIFRADO.txt' gravado (final).")
     else:
         print("   → falha ao gravar 'encoded_DECIFRADO.txt' final.", file=sys.stderr)
 
-    # salvar mapping.py
     py_path = "mapping.py"
     if salvar_mapping_py(py_path, mapa):
         print(f"8 - Mapa salvo em '{py_path}'.")
@@ -540,18 +532,19 @@ def executar_codigo_b_debug():
 
     print("\n✔️ Processo COMPLETO (FINAL v6 com gravação incremental por passada).")
 
-    # --- AQUI: imprimir a mensagem final pedida (modo debug) ---
+    # print final pedido (modo debug)
     print_final_decifrado_debug("encoded_DECIFRADO.txt")
+    mover_arquivos_gerados()
 
 # ---------------------------
-# Entrypoint
+# ENTRYPONT
 # ---------------------------
 def main():
     debug = any(a in ("-debug", "--debug") for a in sys.argv[1:])
     print(">>> Iniciando pipeline: Código A (decodificação) -> Código B (mapeamento)")
     processar_encoded_file("encoded.txt")
     if debug:
-        print(">>> MODO DEBUG: imprimirá apenas passadas que aceitarem ao menos 1 nova atribuição.")
+        print(">>> MODO DEBUG: imprimirá passadas com novas atribuições e imprimirá o final em MAIÚSCULAS.")
         executar_codigo_b_debug()
     else:
         print(">>> MODO NORMAL: execução silenciosa (aplica mapeamentos e imprime somente quando há nova atribuição).")
