@@ -1,8 +1,16 @@
 # decrypt.py
 # Use:
-#   py decrypt.py        -> modo normal (silencioso)
-#   py decrypt.py -debug -> modo debug (tabelas interativas; imprime final MAIÚSCULAS com 3 linhas antes)
-# Ao final: move arquivos gerados para uma pasta ARQUIVOS_GERADOS_YYYY-MM-DD_HH-MM-SS/
+#   py decrypt.py                         -> modo normal (silencioso), default: contar só letras
+#   py decrypt.py -all                    -> modo normal, contar todos os caracteres imprimíveis
+#   py decrypt.py -debug                  -> modo debug, default: contar só letras
+#   py decrypt.py -debug -all             -> modo debug, contar todos os chars imprimíveis
+#   py decrypt.py -debug -busca=J         -> modo debug + busca por alvo 'J'
+#   py decrypt.py -debug -busca=J -all    -> modo debug + busca + modo all
+#
+# Opção -all seleciona a função contar_ascii_21_7E (comportamento antigo).
+# Sem -all, o script considera apenas letras (A-Z, a-z) para agrupamento/align.
+#
+# Ao final: move arquivos gerados para ARQUIVOS_GERADOS_YYYY-MM-DD_HH-MM-SS/
 
 import os
 import re
@@ -85,10 +93,26 @@ def processar_encoded_file(path="encoded.txt"):
         print(f"⚠️ Ocorreu um erro no código A: {e}")
 
 # ---------------------------
-# FUNÇÕES AUXILIARES COMUNS (definidas antes do uso)
+# FUNÇÕES AUXILIARES (NOVO: contar_letras / letras_do_token)
 # ---------------------------
 def contar_ascii_21_7E(token: str) -> int:
-    return sum(1 for c in token if 0x21 <= ord(c) <= 0x7E) if token else 0
+    if token is None:
+        return 0
+    return sum(1 for c in token if 0x21 <= ord(c) <= 0x7E)
+
+def contar_letras(token: str) -> int:
+    if not token:
+        return 0
+    # contar apenas letras A-Z / a-z
+    return len(re.sub(r'[^A-Za-z]', '', token))
+
+def letras_do_token(token: str) -> str:
+    if not token:
+        return ""
+    return re.sub(r'[^A-Za-z]', '', token)
+
+def contar_len(token: str, use_all: bool) -> int:
+    return contar_ascii_21_7E(token) if use_all else contar_letras(token)
 
 def carregar_dict_de_arquivo(filepath, varname):
     if not os.path.isfile(filepath):
@@ -104,7 +128,7 @@ def carregar_dict_de_arquivo(filepath, varname):
     except Exception:
         return OrderedDict()
 
-def carregar_tokens_agrupados(sorted_path="encoded_message_sorted.txt"):
+def carregar_tokens_agrupados(sorted_path="encoded_message_sorted.txt", use_all=False):
     if not os.path.isfile(sorted_path):
         return {}, []
     tokens, seen = [], set()
@@ -116,17 +140,25 @@ def carregar_tokens_agrupados(sorted_path="encoded_message_sorted.txt"):
                 tokens.append(t)
     grupos = defaultdict(list)
     for t in tokens:
-        grupos[contar_ascii_21_7E(t)].append(t)
-    return grupos, sorted(grupos.keys())
+        c = contar_len(t, use_all)
+        grupos[c].append(t)
+    lengths = sorted(grupos.keys())
+    return grupos, lengths
 
 def mapping_conflicts_bidirectional(src_token, tgt_token, current_map):
+    """
+    src_token and tgt_token expected same length for aligned comparison.
+    src_token may be cleaned (letters only) depending on mode.
+    """
     rev = {v: k for k, v in current_map.items()}
     for i, s_ch in enumerate(src_token):
         t_ch = tgt_token[i]
         if s_ch in current_map and current_map[s_ch] != t_ch:
             return True, ("origin_mapped", s_ch, current_map[s_ch], t_ch)
-        if t_ch in rev and rev[t_ch] != s_ch:
-            return True, ("target_taken", t_ch, rev[t_ch], s_ch)
+        if t_ch in rev:
+            existing_src = rev[t_ch]
+            if existing_src != s_ch:
+                return True, ("target_taken", t_ch, existing_src, s_ch)
     return False, None
 
 def aplicar_mapa_e_escrever_preservando_case(input_path, output_path, mapa):
@@ -212,11 +244,6 @@ def print_final_decifrado_debug(filepath):
     sys.stdout.flush()
 
 def mover_arquivos_gerados():
-    """
-    Move arquivos gerados para ARQUIVOS_GERADOS_YYYY-MM-DD_HH-MM-SS/
-    e grava um log movidos_YYYY-MM-DD_HH-MM-SS.txt dentro da pasta.
-    Mantém apenas os 'principais' na raiz.
-    """
     principais = {"decrypt.py", "encoded.txt", "1word_counts.py", "2top_words.py"}
     ts = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
     destino = f"ARQUIVOS_GERADOS_{ts}"
@@ -224,23 +251,19 @@ def mover_arquivos_gerados():
 
     movidos = []
     for nome in os.listdir("."):
-        # skip diretórios e main script files
         if nome in principais:
             continue
         if os.path.isdir(nome):
-            # não mover a própria pasta de destino se por algum motivo existir
             if nome.startswith("ARQUIVOS_GERADOS"):
                 continue
             else:
                 continue
-        # mover apenas arquivos
         try:
             shutil.move(nome, os.path.join(destino, nome))
             movidos.append(nome)
         except Exception as e:
             print(f"⚠️ Falha ao mover {nome}: {e}")
 
-    # escrever log com listagem dos movidos
     log_name = f"movidos_{ts}.txt"
     try:
         with open(os.path.join(destino, log_name), "w", encoding="utf-8") as lf:
@@ -254,7 +277,7 @@ def mover_arquivos_gerados():
 # ---------------------------
 # MODO SILENCIOSO (NÃO MODIFICAR)
 # ---------------------------
-def executar_codigo_b_silent():
+def executar_codigo_b_silent(use_all=False):
     # remove previous snapshot if present
     if os.path.exists("encoded_DECIFRADO.txt"):
         try:
@@ -262,7 +285,7 @@ def executar_codigo_b_silent():
         except Exception:
             pass
 
-    grupos, lengths_order = carregar_tokens_agrupados("encoded_message_sorted.txt")
+    grupos, lengths_order = carregar_tokens_agrupados("encoded_message_sorted.txt", use_all=use_all)
     if not grupos:
         return
     dict1 = carregar_dict_de_arquivo("1word_counts.py", "word_counts_english_rank")
@@ -286,13 +309,15 @@ def executar_codigo_b_silent():
                 continue
             token = candidates[idx]
             pos = token_candidate_pos.get(token, 0)
+
+            # pick candidate by pos respecting used_target_words and length criterion (use_all governs length calc)
             cand = None
             idx_cand = 0
             for d in (dict1, dict2):
                 for w in d.keys():
                     if w in used_target_words:
                         continue
-                    if contar_ascii_21_7E(w) != length:
+                    if contar_len(w, use_all) != length:
                         continue
                     if idx_cand == pos:
                         cand = w
@@ -300,6 +325,7 @@ def executar_codigo_b_silent():
                     idx_cand += 1
                 if cand:
                     break
+
             if not cand:
                 next_token_index[length] = idx + 1
                 token_candidate_pos.pop(token, None)
@@ -307,13 +333,24 @@ def executar_codigo_b_silent():
                     exhausted_lengths.add(length)
                 continue
 
-            conflict, _ = mapping_conflicts_bidirectional(token, cand, mapa)
+            # prepare source for checking: cleaned letters if not use_all, else token itself
+            if use_all:
+                src_for_check = token
+            else:
+                src_for_check = letras_do_token(token)
+
+            # if lengths mismatch (possible if token cleaned removed chars), skip this candidate
+            if len(src_for_check) != len(cand):
+                token_candidate_pos[token] = pos + 1
+                continue
+
+            conflict, _ = mapping_conflicts_bidirectional(src_for_check, cand, mapa)
             if conflict:
                 token_candidate_pos[token] = pos + 1
                 continue
 
-            # ACEITO
-            for i, s_ch in enumerate(token):
+            # ACEITO: apply mapping over letters or all chars depending on mode
+            for i, s_ch in enumerate(src_for_check):
                 t_ch = cand[i]
                 if s_ch in mapa:
                     continue
@@ -332,14 +369,13 @@ def executar_codigo_b_silent():
         else:
             time.sleep(0.01)
 
-    # finalização
     aplicar_mapa_e_escrever_preservando_case("encoded_message.txt", "encoded_DECIFRADO.txt", mapa)
     print_final_em_maiusculo("encoded_DECIFRADO.txt")
     salvar_mapping_py("mapping.py", mapa)
     mover_arquivos_gerados()
 
 # ---------------------------
-# MODO DEBUG (mantém tabelas originais; só imprime quando houve atribuição)
+# MODO DEBUG
 # ---------------------------
 def print_table(rows, headers):
     if not rows:
@@ -354,10 +390,20 @@ def print_table(rows, headers):
         print(sep.join(str(r[i]).ljust(widths[i]) for i in range(len(headers))))
     print()
 
-def executar_codigo_b_debug():
+def executar_codigo_b_debug(search_target=None, use_all=False):
+    """
+    search_target: None ou caractere (ex.: 'J').
+    use_all: True => contar ASCII imprimíveis; False => contar apenas letras.
+    """
+    if search_target is not None:
+        if len(search_target) == 0:
+            search_target = None
+        else:
+            search_target = search_target[0]
+
     print("1 - Carregando tokens de 'encoded_message_sorted.txt' ...")
     barra_progresso(duracao=0.3, prefix="   etapa 1")
-    grupos, lengths_order = carregar_tokens_agrupados("encoded_message_sorted.txt")
+    grupos, lengths_order = carregar_tokens_agrupados("encoded_message_sorted.txt", use_all=use_all)
     if not grupos:
         print("❌ Nenhum token encontrado em 'encoded_message_sorted.txt' ou arquivo ausente. Abortando.")
         return
@@ -386,8 +432,9 @@ def executar_codigo_b_debug():
 
     while not all(length in exhausted_lengths for length in lengths_order):
         round_idx += 1
-        progress_made = False
+        added_total = 0
         rows = []
+        pares_adicionados_esta_passada = []
 
         for length in sorted(lengths_order):
             if length in exhausted_lengths:
@@ -404,13 +451,14 @@ def executar_codigo_b_debug():
             token_to_try = candidates[idx]
             pos = token_candidate_pos.get(token_to_try, 0)
 
+            # find candidate respecting used_target_words and length criteria (use_all governs length calc)
             cand = None
             idx_cand = 0
             for d in (dict1, dict2):
                 for w in d.keys():
                     if w in used_target_words:
                         continue
-                    if contar_ascii_21_7E(w) != length:
+                    if contar_len(w, use_all) != length:
                         continue
                     if idx_cand == pos:
                         cand = w
@@ -423,7 +471,7 @@ def executar_codigo_b_debug():
             if cand:
                 fonte = "1word_counts.py" if cand in dict1 else "2top_words.py"
 
-            attempted_attribution = (build_attribution(token_to_try, cand) if cand else "-")
+            attempted_attribution = (build_attribution(letras_do_token(token_to_try) if not use_all else token_to_try, cand) if cand else "-")
 
             if not cand:
                 detail = "todos candidatos usados/esgotados"
@@ -435,7 +483,18 @@ def executar_codigo_b_debug():
                     rows.append((length, "-", "-", "-", "ESGOTADO", "após avanço", "-"))
                 continue
 
-            conflict, detail = mapping_conflicts_bidirectional(token_to_try, cand, mapa)
+            # prepare source for checking
+            if use_all:
+                src_for_check = token_to_try
+            else:
+                src_for_check = letras_do_token(token_to_try)
+
+            # length check (if cleaning removed chars, lengths may mismatch)
+            if len(src_for_check) != len(cand):
+                token_candidate_pos[token_to_try] = pos + 1
+                continue
+
+            conflict, detail = mapping_conflicts_bidirectional(src_for_check, cand, mapa)
             if conflict:
                 if detail[0] == "origin_mapped":
                     _, s_ch, existing_target, attempted_target = detail
@@ -449,52 +508,80 @@ def executar_codigo_b_debug():
 
             # ACEITO
             added = 0
-            for i, s_ch in enumerate(token_to_try):
+            pares_adicionados_locais = []
+            for i, s_ch in enumerate(src_for_check):
                 t_ch = cand[i]
                 if s_ch in mapa:
                     continue
                 mapa[s_ch] = t_ch
                 added += 1
+                pares_adicionados_locais.append((s_ch, t_ch))
 
             used_target_words.add(cand)
             token_candidate_pos.pop(token_to_try, None)
             next_token_index[length] = idx + 1
 
-            result_detail = f"Pares adicionados: {added} (alvo '{cand}' marcado usado)"
-            attribution = build_attribution(token_to_try, cand)
-            rows.append((length, token_to_try, cand, fonte, "ACEITO", result_detail, attribution))
+            if added > 0:
+                result_detail = f"Pares adicionados: {added} (alvo '{cand}' marcado usado)"
+            else:
+                result_detail = f"Pares adicionados: {added} (nenhum novo)"
+
+            attribution = build_attribution(src_for_check, cand)
+            rows.append((length, token_to_try, cand, fonte, "ACEITO" if added>0 else "ACEITO (sem novos)", result_detail, attribution))
 
             if next_token_index[length] >= len(candidates):
                 exhausted_lengths.add(length)
                 rows.append((length, "-", "-", "-", "ESGOTADO", "após aceitação", "-"))
 
-            progress_made = True
+            added_total += added
+            if pares_adicionados_locais:
+                pares_adicionados_esta_passada.extend(pares_adicionados_locais)
 
-        if progress_made:
-            print(f"\n   Passada #{round_idx} sobre comprimentos...")
-            headers = ["Compr.", "Token", "Candidate", "Fonte", "Resultado", "Detalhe", "Atribuição"]
-            print_table(rows, headers)
+        # Se modo busca: imprimir tabela inteira quando houver par cujo alvo == search_target
+        if search_target is not None:
+            pares_encontrados = [(s, t) for (s, t) in pares_adicionados_esta_passada if t == search_target]
+            if pares_encontrados:
+                print(f"\n   Passada #{round_idx} sobre comprimentos... (contém atribuição para alvo '{search_target}')")
+                headers = ["Compr.", "Token", "Candidate", "Fonte", "Resultado", "Detalhe", "Atribuição"]
+                print_table(rows, headers)
 
-            print("   Gravando snapshot parcial em 'encoded_DECIFRADO.txt' com o mapa atual...")
-            if aplicar_mapa_e_escrever_preservando_case("encoded_message.txt", "encoded_DECIFRADO.txt", mapa):
-                print("   → arquivo 'encoded_DECIFRADO.txt' atualizado (parcial).")
-            else:
-                print("   → falha ao atualizar 'encoded_DECIFRADO.txt' (ver mensagens de erro).")
+                print("   Gravando snapshot parcial em 'encoded_DECIFRADO.txt' com o mapa atual...")
+                if aplicar_mapa_e_escrever_preservando_case("encoded_message.txt", "encoded_DECIFRADO.txt", mapa):
+                    print("   → arquivo 'encoded_DECIFRADO.txt' atualizado (parcial).")
+                else:
+                    print("   → falha ao atualizar 'encoded_DECIFRADO.txt' (ver mensagens de erro).")
 
-            if not progress_made:
-                print("\n   Passada terminou sem aceitar novos candidatos (mas indices/candidate_pos podem ter avançado).")
-            else:
                 print("\n   Passada terminou com pelo menos uma aceitação.")
-
-            if not all(length in exhausted_lengths for length in lengths_order):
-                try:
-                    input("\n   Pressione Enter para continuar para a próxima passada (ou Ctrl+C para sair)...")
-                except KeyboardInterrupt:
-                    print("\n   Interrompido pelo usuário. Saindo.")
-                    return
+                if not all(length in exhausted_lengths for length in lengths_order):
+                    try:
+                        input("\n   Pressione Enter para continuar para a próxima passada (ou Ctrl+C para sair)...")
+                    except KeyboardInterrupt:
+                        print("\n   Interrompido pelo usuário. Saindo.")
+                        return
+            else:
+                pass
         else:
-            # sem progresso nesta passada: segue imediatamente
-            pass
+            # debug padrão: imprimir tabela/snapshot somente se added_total > 0
+            if added_total > 0:
+                print(f"\n   Passada #{round_idx} sobre comprimentos...")
+                headers = ["Compr.", "Token", "Candidate", "Fonte", "Resultado", "Detalhe", "Atribuição"]
+                print_table(rows, headers)
+
+                print("   Gravando snapshot parcial em 'encoded_DECIFRADO.txt' com o mapa atual...")
+                if aplicar_mapa_e_escrever_preservando_case("encoded_message.txt", "encoded_DECIFRADO.txt", mapa):
+                    print("   → arquivo 'encoded_DECIFRADO.txt' atualizado (parcial).")
+                else:
+                    print("   → falha ao atualizar 'encoded_DECIFRADO.txt' (ver mensagens de erro).")
+
+                print("\n   Passada terminou com pelo menos uma aceitação.")
+                if not all(length in exhausted_lengths for length in lengths_order):
+                    try:
+                        input("\n   Pressione Enter para continuar para a próxima passada (ou Ctrl+C para sair)...")
+                    except KeyboardInterrupt:
+                        print("\n   Interrompido pelo usuário. Saindo.")
+                        return
+            else:
+                pass
 
     # resumo e relatório
     print("\n5 - Mapa final construído:")
@@ -540,15 +627,29 @@ def executar_codigo_b_debug():
 # ENTRYPONT
 # ---------------------------
 def main():
-    debug = any(a in ("-debug", "--debug") for a in sys.argv[1:])
+    args = sys.argv[1:]
+    debug = any(a in ("-debug", "--debug") for a in args)
+    busca_arg = None
+    use_all = any(a == "-all" or a == "--all" for a in args)
+
+    for a in args:
+        if a.startswith("-busca=") or a.startswith("--busca="):
+            parts = a.split("=", 1)
+            if len(parts) == 2:
+                busca_arg = parts[1]
+
     print(">>> Iniciando pipeline: Código A (decodificação) -> Código B (mapeamento)")
     processar_encoded_file("encoded.txt")
     if debug:
-        print(">>> MODO DEBUG: imprimirá passadas com novas atribuições e imprimirá o final em MAIÚSCULAS.")
-        executar_codigo_b_debug()
+        if busca_arg:
+            print(f">>> MODO DEBUG com BUSCA: procurando atribuições cujo alvo é '{busca_arg[0]}' (use_all={use_all})")
+            executar_codigo_b_debug(search_target=busca_arg, use_all=use_all)
+        else:
+            print(f">>> MODO DEBUG: execução interativa, exibirá tabelas somente quando pares adicionados > 0 (use_all={use_all}).")
+            executar_codigo_b_debug(use_all=use_all)
     else:
-        print(">>> MODO NORMAL: execução silenciosa (aplica mapeamentos e imprime somente quando há nova atribuição).")
-        executar_codigo_b_silent()
+        print(f">>> MODO NORMAL: execução silenciosa (aplica mapeamentos). use_all={use_all}")
+        executar_codigo_b_silent(use_all=use_all)
 
 if __name__ == "__main__":
     main()

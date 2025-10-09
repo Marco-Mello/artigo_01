@@ -27,7 +27,7 @@ chrome-extension://efaidnbmnnnibpcajpcglclefindmkaj/https://www.englishexperts.c
 
 
 
-
+13 - quando o texto vem com pontuacao
 
 
 # TIVE QUE FORÇAR VALORES!!!
