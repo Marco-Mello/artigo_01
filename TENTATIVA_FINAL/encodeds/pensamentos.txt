@@ -27,7 +27,9 @@ chrome-extension://efaidnbmnnnibpcajpcglclefindmkaj/https://www.englishexperts.c
 
 
 
-13 - quando o texto vem com pontuacao
+13 - quando o texto vem com pontuação
+
+14 - acrescentar palavras que não existem no dicionario
 
 
 # TIVE QUE FORÇAR VALORES!!!

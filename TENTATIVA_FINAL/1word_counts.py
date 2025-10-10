@@ -49,15 +49,19 @@ word_counts_english_rank = {
     "WHO": 48,
     "SO": 49,
     "NO": 50,
+
+
     "DAY": 51, #FORÇADO
     "EXPLORATION": 52, ##FORÇADO
     "BLEAK": 53, #FORÇADO
     "PREJUDICES": 54, #FORÇADO
-    "THINK": 55, #FORÇADO segundo encoded
-    "JOY": 56, #FORÇADO segundo encoded
-    "PIXEL": 57, #FORÇADO segundo encoded
-    "CIVILIZATION": 58, #FORÇADO segundo encoded
-    "FREQUENT": 59, #FORÇADO segundo encoded
+    #"THINK": 55, #FORÇADO segundo encoded
+    "JOY": 56, #FORÇADO segundo encoded  ->>> TEXTO 2
+    "PIXEL": 57, #FORÇADO segundo encoded ->>> TEXTO 2
+    "CIVILIZATION": 58, #FORÇADO segundo encoded ->>> TEXTO 2
+    "FREQUENT": 59, #FORÇADO segundo encoded ->>> TEXTO 2
+
+
     #"EXPLORER": 58, #FORÇADO segundo encoded
     #"EXPERIENCE": 59, #FORÇADO segundo encoded
     
