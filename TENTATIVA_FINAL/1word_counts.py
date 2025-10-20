@@ -51,15 +51,15 @@ word_counts_english_rank = {
     "NO": 50,
 
 
-    "DAY": 51, #FORÇADO
-    "EXPLORATION": 52, ##FORÇADO
-    "BLEAK": 53, #FORÇADO
-    "PREJUDICES": 54, #FORÇADO
+   # "DAY": 51, #FORÇADO
+   # "EXPLORATION": 52, ##FORÇADO
+ #   "BLEAK": 53, #FORÇADO
+   # "PREJUDICES": 54, #FORÇADO
     #"THINK": 55, #FORÇADO segundo encoded
-    "JOY": 56, #FORÇADO segundo encoded  ->>> TEXTO 2
-    "PIXEL": 57, #FORÇADO segundo encoded ->>> TEXTO 2
-    "CIVILIZATION": 58, #FORÇADO segundo encoded ->>> TEXTO 2
-    "FREQUENT": 59, #FORÇADO segundo encoded ->>> TEXTO 2
+   # "JOY": 56, #FORÇADO segundo encoded  ->>> TEXTO 2
+   # "PIXEL": 57, #FORÇADO segundo encoded ->>> TEXTO 2
+  #  "CIVILIZATION": 58, #FORÇADO segundo encoded ->>> TEXTO 2
+  #  "FREQUENT": 59, #FORÇADO segundo encoded ->>> TEXTO 2
 
 
     #"EXPLORER": 58, #FORÇADO segundo encoded

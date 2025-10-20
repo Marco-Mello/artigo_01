@@ -9,6 +9,10 @@ pensamentos
 
 5 - no artigo https://norvig.com/mayzner.html a letra A, aparece mais a frente no rank tanto na classificacao de letra mais usada e tbm como palavra mais usada do que I
 
+
+>>>> https://norvig.com/ngrams/ <<<<
+>>>>          https://www.englishexperts.com.br/1000-palavras-em-ingles/   <<<<
+
 6 - com isso, criar um algoritmo que consulte na lista do diciionario rankeado a primeira letra que aparece e substitui criando um dicionario com essa subtituicao
 
 7 - artigo com o rank das palavras mais usadas no ingles (no artigo do norvig tinham apenas o top 50 de palavras):
