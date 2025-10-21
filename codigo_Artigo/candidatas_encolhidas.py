@@ -1,26 +1,20 @@
 # -*- coding: utf-8 -*-
-# Lista de palavras já utilizadas (checkpoint)
+# Palavras do top_words já utilizadas
 candidatas_encolhidas = [
     "A",
-    "AGAIN",
-    "AT",
-    "BEEN",
-    "BLUE",
-    "DARK",
-    "DISTANT",
-    "EXPERIENCE",
-    "FRACTION",
-    "JOY",
-    "KING",
-    "LIFE",
-    "LIGHT",
-    "MAKE",
-    "MORE",
-    "PLANET",
-    "SAVE",
+    "AND",
+    "ARE",
+    "ARMS",
+    "BE",
+    "BUT",
+    "CEASE",
+    "HAVE",
+    "IN",
+    "OF",
     "THAT",
+    "THE",
     "THEIR",
-    "THIS",
-    "TINY",
-    "WHERE"
+    "TO",
+    "WHICH",
+    "WOULD"
 ]

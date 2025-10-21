@@ -2,13 +2,15 @@
 # -*- coding: utf-8 -*-
 """
 decrypt.py
-Pipeline principal — passos 1..12 conforme especificado.
+Pipeline principal — passos 1..14 conforme especificado.
+Comentários em cada passo no formato pedido.
 """
 
 import string
 import re
 import os
 import json
+import unicodedata
 from collections import Counter
 
 from caracteres_printaveis import caracteres_printaveis
@@ -22,7 +24,8 @@ from funcoes_decodificador import (
     aplicar_mapeamentos_em_posicoes,
     calcular_impacto_por_bloco,
     encontrar_candidata_compatível,
-    restaurar_por_posicao
+    restaurar_por_posicao,
+    aplicar_mapeamento_em_texto,
 )
 from top_words import top_words
 
@@ -30,24 +33,39 @@ from top_words import top_words
 # Configurações principais
 # =====================================================================
 DEBUG = False                     # Ativar/desativar prints detalhados
-arquivo_entrada = "encoded.txt"  # Nome do arquivo de entrada
-
-# Parâmetros para Passo 10 (thresholds dinâmicos)
-passo_threshold = 2       # decremento em pontos percentuais (ex: 2)
-limite_threshold = 34     # limite mínimo inclusivo (ex: 30)
+arquivo_entrada = "encoded_EXIST.txt"   # Nome do arquivo de entrada
+passo_threshold = 2               # decremento em pontos percentuais para thresholds
+limite_threshold = 34             # limite mínimo inclusivo para thresholds
 # =====================================================================
 
+# ------------------------
+# Normalização / utilitários
+# ------------------------
+def _normalizar_token(t: str) -> str:
+    if not isinstance(t, str):
+        return ""
+    s = t.strip()
+    s = unicodedata.normalize("NFD", s)
+    s = "".join(ch for ch in s if not unicodedata.combining(ch))
+    return s.lower()
+
+top_set_normalized = {_normalizar_token(w) for w in top_words.keys()}
+top_sorted = sorted(top_words.items(), key=lambda item: item[1])
 
 ### ================================================================== ###
 ### Passo 1 - Separando cada caractere por linha                       ###
 ### ================================================================== ###
-
+# lê o arquivo, filtra apenas sequências de caracteres printáveis
+# usa string.printable (sem o whitespace final) e re.escape para montar regex
+# gera lista 'sequencias' contendo cada sequência encontrada
+# útil para etapas seguintes (padronizar/decodificar)
 if DEBUG:
     print("\n[DEBUG] Iniciando Passo 1: Separando caracteres printáveis...")
 
 with open(arquivo_entrada, "r", encoding="utf-8") as f:
     data = f.read()
 
+# regex para caracteres printáveis (sem whitespace final)
 chars_regex = re.escape(string.printable.strip())
 sequencias = re.findall(f"[{chars_regex}]+", data)
 
@@ -64,7 +82,8 @@ if DEBUG:
 ### ================================================================== ###
 ### Passo 2 - Padronizando o conteúdo para binário de 8 bits           ###
 ### ================================================================== ###
-
+# remove espaços das sequências, completa com zeros à esquerda até múltiplos de 8
+# retorna 'sequencias_padronizadas' para decodificação no passo 3
 if DEBUG:
     print("\n[DEBUG] Iniciando Passo 2: Padronizando conteúdo para 8 bits...")
 
@@ -83,7 +102,8 @@ if DEBUG:
 ### ================================================================== ###
 ### Passo 3 - Busca e substituição no dicionário                       ###
 ### ================================================================== ###
-
+# converte cada byte (8 bits) em caractere usando o dicionário bin->char
+# resultado: lista 'decodificadas' com linhas de texto decodificadas
 if DEBUG:
     print("\n[DEBUG] Iniciando Passo 3: Substituindo binário por caracteres...")
 
@@ -94,34 +114,37 @@ if DEBUG:
     for seq in decodificadas:
         print(seq)
 
-### ================================================================== ###
-### ================================================================== ###
-### ================================================================== ###
+### =================================================================== ###
+### =================================================================== ###
+### =================================================================== ###
 
 
 ### ================================================================== ###
 ### Passo 4 - Associar cada linha a uma palavra e lembrar a posição     ###
 ### ================================================================== ###
-
+# limpa tokens, trata apóstrofo/traço/--, remove acentos e pontuação
+# guarda original_lines_by_pos para reconstrução posterior (passo 13)
+# retorna palavras_pos = [(pos, palavra_limpa), ...]
 if DEBUG:
-    print("\n[DEBUG] Iniciando Passo 4: Associando cada linha a uma palavra e lembrando posição (limpeza: apenas letras, trata apóstrofos)...")
+    print("\n[DEBUG] Iniciando Passo 4: Associando cada linha a uma palavra e lembrando posição (limpeza: apenas letras, trata apóstrofos/traço/--)...")
 
-palavras_pos = associar_palavras_com_posicao(decodificadas)
+palavras_pos, original_lines_by_pos = associar_palavras_com_posicao(decodificadas)
 
 if DEBUG:
     print(f"[DEBUG] Total de palavras com posição (após limpeza): {len(palavras_pos)}")
     for pos, p in palavras_pos:
         print(f"{pos}: {p}")
 
-### ================================================================== ###
-### ================================================================== ###
-### ================================================================== ###
+### =================================================================== ###
+### =================================================================== ###
+### =================================================================== ###
 
 
 ### ================================================================== ###
 ### Passo 5 - Ordenando palavras por comprimento (modo em blocos)      ###
 ### ================================================================== ###
-
+# cria 'blocos' (rodadas) com no máximo 1 palavra por tamanho por rodada
+# também retorna 'palavras_ordenadas_pos' = flat (lista única intercalada)
 if DEBUG:
     print("\n[DEBUG] Iniciando Passo 5: Ordenando palavras por comprimento (em blocos)...")
 
@@ -137,24 +160,28 @@ if DEBUG:
             print(f"{pos}: {p}")
         print()
 
-### ================================================================== ###
-### ================================================================== ###
-### ================================================================== ###
+### =================================================================== ###
+### =================================================================== ###
+### =================================================================== ###
 
 
 ### ================================================================== ###
 ### Preparação: estado global para mapeamentos e controle de top_words ###
 ### ================================================================== ###
-used_top_words = set()      # palavras do top_words já utilizadas (não reutilizar)
-mapa_substituicao = {}      # mapeamento acumulado cifrado->claro (minúsculo)
-palavras_substituidas_pos = palavras_ordenadas_pos.copy()  # estado corrente do flat
+# used_top_words: palavras já usadas do top_words (não reutilizar)
+# mapa_substituicao: acumulador de mapeamentos cifrado -> claro (minúsculo)
+# palavras_substituidas_pos: estado corrente do flat (lista de (pos,palavra))
+used_top_words = set()
+mapa_substituicao = {}
+palavras_substituidas_pos = palavras_ordenadas_pos.copy()
 ### ================================================================== ###
 
 
 ### ================================================================== ###
 ### Passo 6 - Aplicar PRIMEIRO mapeamento do Bloco 1 (apenas um mapeamento) ###
 ### ================================================================== ###
-
+# Gera mapeamentos apenas para a primeira palavra válida do bloco 1 e aplica 1º mapeamento
+# Atualiza mapa_substituicao e marca candidata como usada (se válida)
 if DEBUG:
     print("\n[DEBUG] Iniciando Passo 6 (primeira palavra apenas): Gerando mapeamentos da primeira palavra do primeiro bloco...")
 
@@ -194,7 +221,11 @@ else:
             mapa_substituicao[c0] = v0
 
         if candidata_primeira:
-            used_top_words.add(candidata_primeira)
+            if _normalizar_token(candidata_primeira) in top_set_normalized:
+                used_top_words.add(candidata_primeira)
+            else:
+                if DEBUG:
+                    print(f"[DEBUG] AVISO: candidata '{candidata_primeira}' não pertence ao top_words (após normalização). Não marcada.")
 
         if DEBUG:
             print(f"\n[DEBUG] Aplicado 1º mapeamento (da primeira palavra): {c0} -> {v0}")
@@ -206,15 +237,16 @@ else:
         if DEBUG:
             input("\n[DEBUG] Pausa após 1ª substituição: pressione Enter para continuar...")
 
-### ================================================================== ###
-### ================================================================== ###
-### ================================================================== ###
+### =================================================================== ###
+### =================================================================== ###
+### =================================================================== ###
 
 
 ### ================================================================== ###
 ### Passo 7 - Iterativo no Bloco 1                                      ###
 ### ================================================================== ###
-
+# Itera dentro do bloco 1, recalcula impacto, encontra candidata compatível,
+# aplica mapeamentos válidos (respeitando mapa existente e letras reservadas)
 if DEBUG:
     print("\n[DEBUG] Iniciando Passo 7 iterativo: aplicar mapeamentos no primeiro bloco até exaurir candidatos...")
 
@@ -249,7 +281,6 @@ else:
             print(f"[DEBUG] Palavra mais impactada nesta iteração: pos {pos_top} | antes: '{palavra_top_before}' | depois: '{palavra_top_after}'")
             print(f"[DEBUG] Diferenças: {top['diff_count']} / {len(palavra_top_before)} ({top['diff_frac']:.2%})")
 
-        top_sorted = sorted(top_words.items(), key=lambda item: item[1])
         mapa_existente = mapa_substituicao.copy()
         letras_usadas = set(mapa_existente.values())
 
@@ -284,7 +315,12 @@ else:
                 print("[DEBUG] Nenhum mapeamento válido permaneceu após filtragem. Rotina encerra.")
             break
 
-        used_top_words.add(candidata_word)
+        if _normalizar_token(candidata_word) in top_set_normalized:
+            used_top_words.add(candidata_word)
+        else:
+            if DEBUG:
+                print(f"[DEBUG] AVISO: candidata '{candidata_word}' não pertence a top_words (após normalização). Não marcada.")
+
         pos_alvo = {pos for pos, _ in bloco0}
         flat_current = aplicar_mapeamentos_em_posicoes(flat_current, mapeamentos_validos, pos_alvo)
         mapa_substituicao.update({c: v for c, v in mapeamentos_validos})
@@ -309,53 +345,60 @@ if DEBUG:
     for k, v in sorted(mapa_substituicao.items()):
         print(f"  {k} -> {v}")
 
-### ================================================================== ###
-### ================================================================== ###
-### ================================================================== ###
+### =================================================================== ###
+### =================================================================== ###
+### =================================================================== ###
 
 
 ### ================================================================== ###
 ### Passo 8 - Salvar mapeamento acumulado e palavras candidatas usadas ###
 ### ================================================================== ###
+# salva final_map.py e candidatas_encolhidas.py (checkpoint)
 if DEBUG:
     print("\n[DEBUG] Iniciando Passo 8: Salvando resultados...")
 
 final_map_path = "final_map.py"
 candidatas_path = "candidatas_encolhidas.py"
 
-with open(final_map_path, "w", encoding="utf-8") as f:
-    f.write("# -*- coding: utf-8 -*-\n")
-    f.write("# Dicionário de mapeamento final gerado automaticamente\n")
-    f.write("final_map = ")
-    json.dump(mapa_substituicao, f, ensure_ascii=False, indent=4)
+def _salvar_checkpoints(mapa_subst, used_words):
+    with open(final_map_path, "w", encoding="utf-8") as f:
+        f.write("# -*- coding: utf-8 -*-\n")
+        f.write("# Dicionário de mapeamento final gerado automaticamente\n")
+        f.write("final_map = ")
+        json.dump(mapa_subst, f, ensure_ascii=False, indent=4)
+    with open(candidatas_path, "w", encoding="utf-8") as f:
+        f.write("# -*- coding: utf-8 -*-\n")
+        f.write("# Palavras do top_words já utilizadas\n")
+        f.write("candidatas_encolhidas = ")
+        json.dump(sorted(list(used_words)), f, ensure_ascii=False, indent=4)
 
-with open(candidatas_path, "w", encoding="utf-8") as f:
-    f.write("# -*- coding: utf-8 -*-\n")
-    f.write("# Palavras do top_words já utilizadas\n")
-    f.write("candidatas_encolhidas = ")
-    json.dump(sorted(list(used_top_words)), f, ensure_ascii=False, indent=4)
-
+_salvar_checkpoints(mapa_substituicao, used_top_words)
 if DEBUG:
-    print(f"[DEBUG] Mapeamento final salvo em {final_map_path} ({len(mapa_substituicao)} entradas).")
+    print(f"[DEBUG] Mapeamento inicial salvo em {final_map_path} ({len(mapa_substituicao)} entradas).")
     print(f"[DEBUG] Palavras candidatas salvas em {candidatas_path} ({len(used_top_words)} palavras).")
 
-### ================================================================== ###
-### ================================================================== ###
-### ================================================================== ###
+### =================================================================== ###
+### =================================================================== ###
+### =================================================================== ###
 
 
 ### ================================================================== ###
 ### Passo 10 - Varrer blocos por múltiplos thresholds (dinâmico)       ###
 ### ================================================================== ###
+# Gera thresholds dinâmicos e percorre todos os blocos para cada threshold
+# Em cada bloco:
+#  A) aplica final_map existente a todas as palavras do bloco
+#  B) calcula ratio por palavra (substituídas/comprimento)
+#  C) tenta achar candidatas para palavras com ratio >= threshold
+# Atualiza mapa_substituicao e used_top_words conforme aplica mapeamentos válidos
 if DEBUG:
     print("\n[DEBUG] Iniciando Passo 10: varrer blocos com múltiplos thresholds...")
 
-# Geração dinâmica dos thresholds (100 -> limite_threshold inclusive, step = passo_threshold)
 thresholds = list(range(100, limite_threshold - 1, -passo_threshold))
 if DEBUG:
     print(f"[DEBUG] Thresholds gerados dinamicamente (passo={passo_threshold}, limite={limite_threshold}): {thresholds}")
 
-# Carregar possíveis checkpoints existentes
+# Carrega checkpoints se existirem
 if os.path.exists(final_map_path):
     try:
         from final_map import final_map as loaded_final_map
@@ -384,38 +427,23 @@ else:
     if DEBUG:
         print("[DEBUG] candidatas_encolhidas.py não encontrado — inicializando lista vazia.")
 
-# Estado compartilhado inicial
 mapa_substituicao = loaded_final_map.copy()
 used_top_words = set(loaded_candidatas)
 
-# flat atual inicial (usa estado do pipeline anterior se existir)
 try:
     flat_current_global = palavras_substituidas_pos.copy()
 except NameError:
     flat_current_global = palavras_ordenadas_pos.copy()
 
-top_sorted = sorted(top_words.items(), key=lambda item: item[1])
+def _salvar_checkpoints_local(mapa_subst, used_words):
+    _salvar_checkpoints(mapa_subst, used_words)
 
-def _salvar_checkpoints(mapa_subst, used_words):
-    with open(final_map_path, "w", encoding="utf-8") as f:
-        f.write("# -*- coding: utf-8 -*-\n")
-        f.write("# Dicionário de mapeamento final (checkpoint)\n")
-        f.write("final_map = ")
-        json.dump(mapa_subst, f, ensure_ascii=False, indent=4)
-    with open(candidatas_path, "w", encoding="utf-8") as f:
-        f.write("# -*- coding: utf-8 -*-\n")
-        f.write("# Lista de palavras já utilizadas (checkpoint)\n")
-        f.write("candidatas_encolhidas = ")
-        json.dump(sorted(list(used_words)), f, ensure_ascii=False, indent=4)
-
-# main loop thresholds
 for ti, thr_percent in enumerate(thresholds):
     RATIO_THRESHOLD = thr_percent / 100.0
     if DEBUG:
         print(f"\n[DEBUG] ================= Threshold {thr_percent}% (idx {ti}) =================")
         print(f"[DEBUG] Iterando blocos com ratio >= {RATIO_THRESHOLD:.0%}")
 
-    # ✅ agora TODAS as rodadas (inclusive a primeira) percorrem TODOS os blocos
     bloco_range = range(0, len(blocos))
 
     for bloco_index in bloco_range:
@@ -543,9 +571,13 @@ for ti, thr_percent in enumerate(thresholds):
                     if mapa_substituicao[c] != v and DEBUG:
                         print(f"[DEBUG] Não sobrescrevendo {c}: já mapeado para {mapa_substituicao[c]}")
 
-            used_top_words.add(candidata_word)
-            if DEBUG:
-                print(f"[DEBUG] Marcada candidata como usada: {candidata_word}")
+            if _normalizar_token(candidata_word) in top_set_normalized:
+                used_top_words.add(candidata_word)
+                if DEBUG:
+                    print(f"[DEBUG] Marcada candidata como usada: {candidata_word}")
+            else:
+                if DEBUG:
+                    print(f"[DEBUG] AVISO: candidata '{candidata_word}' não pertence a top_words (após normalização). Não marcada.")
 
             if DEBUG:
                 print("\n[DEBUG] Resultado parcial do bloco após aplicação:")
@@ -570,7 +602,7 @@ for ti, thr_percent in enumerate(thresholds):
                     print("[DEBUG] Usuário interrompeu o processamento de blocos (Passo 10).")
                 break
 
-    # fim loop blocos para este threshold
+    # checkpoint após cada threshold
     if DEBUG:
         print(f"\n[DEBUG] Checkpoint: salvando final_map.py e candidatas_encolhidas.py após threshold {thr_percent}%...")
     _salvar_checkpoints(mapa_substituicao, used_top_words)
@@ -585,7 +617,6 @@ for ti, thr_percent in enumerate(thresholds):
             break
 
 # fim loop thresholds
-
 if DEBUG:
     print("\n[DEBUG] Finalizando Passo 10: salvando arquivos finais...")
 _salvar_checkpoints(mapa_substituicao, used_top_words)
@@ -595,14 +626,12 @@ if DEBUG:
 ### ================================================================== ###
 ### Passo 11 - Exibir mapeamento acumulado e sequência de palavras por posição
 ### ================================================================== ###
-
-# 1) Preparar o mapa a exibir (pode não existir)
+# Restaura flat por posição e imprime sequência única (sempre)
 try:
     mapa_exibir = mapa_substituicao
 except NameError:
     mapa_exibir = {}
 
-# 2) Escolher o flat atual para exibição (estado após substituições)
 flat_para_exibir = None
 if 'flat_current_global' in globals():
     flat_para_exibir = flat_current_global
@@ -611,7 +640,6 @@ elif 'palavras_substituidas_pos' in globals():
 elif 'palavras_ordenadas_pos' in globals():
     flat_para_exibir = palavras_ordenadas_pos
 
-# 3) Construir lista restaurada por índice (posição -> palavra)
 restaurado = []
 if flat_para_exibir is not None:
     try:
@@ -624,14 +652,12 @@ if flat_para_exibir is not None:
         except Exception:
             restaurado = []
 
-# 4) Montar sequência única (palavra por posição, lacunas como campos vazios)
 sequencia_por_pos = " ".join((val if val is not None else "") for val in restaurado)
 
-# 5) Imprime a linha sequencial sempre (independente de DEBUG)
+# imprime sempre a sequência final por posição (não depende de DEBUG)
 print("\n[RESULT] Sequência de palavras na ordem das posições (campos vazios preservam lacunas):")
 print(sequencia_por_pos)
 
-# 6) Para DEBUG: mostrar mapa acumulado e lista detalhada (posição: palavra)
 if DEBUG:
     print("\n[DEBUG] Mapeamento acumulado (cifrado -> claro):")
     if not mapa_exibir:
@@ -647,54 +673,25 @@ if DEBUG:
         for pos, pw in flat_para_exibir:
             print(f"{pos}: {pw}")
 
-    print("\n[DEBUG] Versão restaurada por índice (index -> palavra). Índices sem palavra ficarão vazios:")
-    for idx, val in enumerate(restaurado):
-        display_val = val if val else "<vazio>"
-        print(f"{idx}: {display_val}")
-
 print("\n[RESULT] Passo 11 concluído.")
 
+'''
 ### ================================================================== ###
 ### Passo 12 - Percentual de palavras do texto final presentes em top_words
 ### ================================================================== ###
-# escolhe o flat/estado final (usa restaurado se já construído no Passo 11)
-try:
-    palavras_por_pos = restaurado
-except NameError:
-    flat_para_exibir = None
-    if 'flat_current_global' in globals():
-        flat_para_exibir = flat_current_global
-    elif 'palavras_substituidas_pos' in globals():
-        flat_para_exibir = palavras_substituidas_pos
-    elif 'palavras_ordenadas_pos' in globals():
-        flat_para_exibir = palavras_ordenadas_pos
 
-    if flat_para_exibir is None:
-        palavras_por_pos = []
-    else:
-        try:
-            palavras_por_pos = restaurar_por_posicao(flat_para_exibir)
-        except Exception:
-            pos_to_word = {pos: pw for pos, pw in flat_para_exibir}
-            max_pos = max(pos_to_word.keys()) if pos_to_word else -1
-            palavras_por_pos = [pos_to_word.get(i, "") for i in range(max_pos + 1)]
-
-# transforma em lista de palavras (remove campos vazios)
-palavras_lista = [w for w in palavras_por_pos if w and w.strip()]
-
-# prepara conjunto do top_words em lower para busca rápida
-top_set_lower = {w.lower() for w in top_words.keys()}
+palavras_lista = [w for w in restaurado if w and w.strip()]
+top_set_lower = top_set_normalized
 
 total_words = len(palavras_lista)
 if total_words == 0:
     print("\n[RESULT] Passo 12: nenhum token/palavra encontrada para análise (total = 0).")
 else:
-    from collections import Counter
     freq = Counter(w for w in palavras_lista)
-    freq_lower = Counter(w.lower() for w in palavras_lista)
+    palavras_lista_norm = [_normalizar_token(w) for w in palavras_lista]
 
-    matched = [w for w in palavras_lista if w.lower() in top_set_lower]
-    unmatched = [w for w in palavras_lista if w.lower() not in top_set_lower]
+    matched = [orig for orig, norm in zip(palavras_lista, palavras_lista_norm) if norm in top_set_lower]
+    unmatched = [orig for orig, norm in zip(palavras_lista, palavras_lista_norm) if norm not in top_set_lower]
 
     matched_count = len(matched)
     pct = (matched_count / total_words) * 100.0
@@ -704,130 +701,161 @@ else:
     print(f"[RESULT] Palavras encontradas em top_words: {matched_count} ({pct:.2f}%)")
 
     unique_total = len(set(w.lower() for w in palavras_lista))
-    unique_matched = len(set(w.lower() for w in matched))
-    unique_unmatched = len(set(w.lower() for w in unmatched))
+    unique_matched = len(set(_normalizar_token(w) for w in matched))
+    unique_unmatched = len(set(_normalizar_token(w) for w in unmatched))
     print(f"[RESULT] Palavras únicas: {unique_total} | únicas em top_words: {unique_matched} | únicas não em top_words: {unique_unmatched}")
 
-    # Mostrar TODAS as palavras encontradas (ordenadas por frequência)
     print("\n[RESULT] Todas as palavras encontradas em top_words (por frequência):")
-    # freq.most_common() já retorna em ordem decrescente; filtramos as que pertencem ao top_set_lower
     for w, c in freq.most_common():
-        if w.lower() in top_set_lower:
+        if _normalizar_token(w) in top_set_lower:
             print(f"  {w} — {c}")
 
-    # Mostrar TODAS as palavras NÃO encontradas (ordenadas por frequência)
     print("\n[RESULT] Todas as palavras NÃO encontradas em top_words (por frequência):")
     unmatched_freq = Counter(w for w in unmatched)
     for w, c in unmatched_freq.most_common():
         print(f"  {w} — {c}")
 
-    # DEBUG: também listar únicas (opcional, aqui sempre mostrado para transparência)
-    if DEBUG:
-        print("\n[DEBUG] Lista única (lower) de palavras encontradas em top_words:")
-        for w in sorted(set(w.lower() for w in matched)):
-            print(f"  {w}")
-        print("\n[DEBUG] Lista única (lower) de palavras NÃO encontradas em top_words:")
-        for w in sorted(set(w.lower() for w in unmatched)):
-            print(f"  {w}")
-
 print("\n[RESULT] Passo 12 concluído.")
-### ================================================================== ###
-
-
+'''
 
 ### ================================================================== ###
-### Passo 13 - Reinserir pontuação e sufixos removidos após apóstrofo
+### Passo 13 - Reconstruir texto com pontuação e sufixos (apóstrofo/traço/--) ###
 ### ================================================================== ###
-### Objetivo:
-###  - usar o mapa original_lines_by_pos (guardado no Passo 4) para reinserir:
-###      a) a pontuação original ao redor da palavra; 
-###      b) o sufixo que foi removido após apóstrofo (ex: "HAHS'S" -> "HAHS" durante limpeza;
-###         aqui devolvemos a forma final como "decifrado + 'S'").
-###  - salva o resultado em final_reconstructed.txt e imprime com [RESULT].
-### ================================================================== ###
-
+# Reconstrói usando original_lines_by_pos e restaurado
+# Reinsere sufixos (como "'S", "-ING" ou "--X") preservando a parte antes do símbolo
+# Salva em final_reconstructed.txt
 if DEBUG:
-    print("\n[DEBUG] Iniciando Passo 13: reconstruindo texto com pontuação e sufixos de apóstrofo...")
-
-# original_lines_by_pos deve ter sido retornado no Passo 4 (ao chamar associar_palavras_com_posicao).
-# Se por algum motivo não existir, avisamos e pulamos.
-try:
-    original_lines_by_pos  # apenas verifica existência
-except NameError:
-    original_lines_by_pos = {}
-
-# garante que 'restaurado' existe (criado no Passo 11)
-try:
-    restaurado
-except NameError:
-    try:
-        restaurado = restaurar_por_posicao(flat_current_global)
-    except Exception:
-        restaurado = []
-
-# padrões úteis
-apostrofo_pattern = re.compile(r"[\'\u2019`]")
-letters_seq = re.compile(r"[A-Za-z\u00C0-\u017F]+")
+    print("\n[DEBUG] Iniciando Passo 13: reconstruindo texto com pontuação e sufixos de apóstrofo/traço/--...")
 
 reconstructed_by_pos = []
-
 max_pos = max(len(restaurado), max(original_lines_by_pos.keys())+1 if original_lines_by_pos else 0)
+apostrofo_pattern = re.compile(r"[\'\u2019`-]")
+
 for i in range(max_pos):
     dec_word = ""
     if i < len(restaurado):
         dec_word = restaurado[i] or ""
     orig_line = original_lines_by_pos.get(i, "")
 
-    # se não há palavra decifrada, use a original diretamente (preserva pontuação)
     if not dec_word:
-        reconstructed = orig_line
-        reconstructed_by_pos.append(reconstructed)
+        reconstructed_by_pos.append(orig_line)
         continue
 
     if not orig_line:
-        # nada original: apenas usa a palavra decifrada
         reconstructed_by_pos.append(dec_word)
         continue
 
-    # caso: havia apóstrofo seguido de letra no original (indicando que cortamos)
     m = apostrofo_pattern.search(orig_line)
     if m and m.start() + 1 < len(orig_line) and re.match(r"[A-Za-z\u00C0-\u017F]", orig_line[m.start()+1]):
-        # separamos prefix (antes do apóstrofo) e suffix (a partir do apóstrofo)
         prefix = orig_line[:m.start()]
-        suffix = orig_line[m.start():]  # inclui apóstrofo
-        # no prefix pode haver pontuação; queremos substituir a última sequência de letras pelo dec_word
-        # substitui a última sequência de letras em prefix por dec_word
-        def _replace_last_letters(match):
-            return dec_word
+        suffix = orig_line[m.start():]
         new_prefix = re.sub(r"([A-Za-z\u00C0-\u017F]+)(?!.*[A-Za-z\u00C0-\u017F])", lambda mo: dec_word, prefix, count=1)
         reconstructed = new_prefix + suffix
         reconstructed_by_pos.append(reconstructed)
         continue
 
-    # caso geral: substituir a primeira sequência de letras no orig_line pela palavra decifrada,
-    # preservando demais caracteres (pontuação antes/depois)
     reconstructed = re.sub(r"[A-Za-z\u00C0-\u017F]+", dec_word, orig_line, count=1)
     reconstructed_by_pos.append(reconstructed)
 
-# monta texto final: juntamos por espaço (mantendo lacunas vazias como campos vazios)
 final_text = " ".join(item if item is not None else "" for item in reconstructed_by_pos)
-
-# salva em arquivo
 out_path = "final_reconstructed.txt"
 with open(out_path, "w", encoding="utf-8") as f:
     f.write(final_text)
 
-# imprime resultado resumido (sempre)
-print("\n[RESULT] Passo 13 — Texto final reconstruído com pontuação e sufixos (arquivo salvo):")
-print(f"[RESULT] {out_path}")
-print(final_text)
-
+print(f"\n[RESULT] Passo 13 — Texto final reconstruído com pontuação e sufixos (arquivo salvo): {out_path}")
 if DEBUG:
-    print("\n[DEBUG] Mostrando primeiros 2000 caracteres do texto reconstruído (para revisão):")
+    print("\n[DEBUG] Trecho (até 2000 chars) do texto reconstruído:")
     print(final_text[:2000])
 
-if DEBUG:
-    print("\n[DEBUG] Passo 13 concluído.")
-else:
-    print("\n[RESULT] Passo 13 concluído.")
+print("\n[RESULT] Passo 13 concluído.")
+
 ### ================================================================== ###
+### PASSO 14 - Aplicar mapeamento às maiúsculas remanescentes e imprimir
+### ================================================================== ###
+# Carrega final_map.py (se existir) com segurança, filtra pares 1-char->1-char
+# Percorre cada caractere MAIÚSCULO do final_text e aplica substituição se existir
+# Conta e imprime quantas substituições foram feitas por par e imprime o texto final
+if DEBUG:
+    print("\n[DEBUG] Iniciando Passo 14: aplicando final_map.py às maiúsculas remanescentes no texto final...")
+
+# carregar final_map.py dinamicamente (fallback para mapa_substituicao em memória)
+mapa_atual = {}
+if os.path.exists(final_map_path):
+    try:
+        import importlib.util
+        spec = importlib.util.spec_from_file_location("final_map_module", final_map_path)
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+        mapa_atual = getattr(mod, "final_map", {}).copy() if hasattr(mod, "final_map") else {}
+        if DEBUG:
+            print(f"[DEBUG] final_map.py carregado com {len(mapa_atual)} entradas.")
+    except Exception as e:
+        mapa_atual = mapa_substituicao.copy() if 'mapa_substituicao' in globals() else {}
+        if DEBUG:
+            print(f"[DEBUG] Erro ao carregar final_map.py ({e}). Usando mapa_substituicao em memória ({len(mapa_atual)} entradas).")
+else:
+    mapa_atual = mapa_substituicao.copy() if 'mapa_substituicao' in globals() else {}
+    if DEBUG:
+        print(f"[DEBUG] final_map.py não encontrado. Usando mapa_substituicao em memória ({len(mapa_atual)} entradas).")
+
+# filtrar pares inválidos, mantemos apenas mapeamentos 1-char->1-char
+mapa_clean = {}
+for k, v in mapa_atual.items():
+    if not (isinstance(k, str) and isinstance(v, str)):
+        continue
+    if len(k) != 1 or len(v) != 1:
+        continue
+    mapa_clean[k] = v
+
+if DEBUG:
+    print(f"[DEBUG] Mapa filtrado para substituições de caractere único: {len(mapa_clean)} pares.")
+
+# aplicar substituições SOMENTE para caracteres maiúsculos do texto final
+from collections import Counter
+sub_counter = Counter()
+out_chars = []
+total_subs = 0
+
+for ch in final_text:
+    if ch.isupper():
+        replaced = False
+        if ch in mapa_clean:
+            out_chars.append(mapa_clean[ch]); sub_counter[(ch, mapa_clean[ch])] += 1; total_subs += 1; replaced = True
+        else:
+            if ch.upper() in mapa_clean:
+                out_chars.append(mapa_clean[ch.upper()]); sub_counter[(ch, mapa_clean[ch.upper()])] += 1; total_subs += 1; replaced = True
+            elif ch.lower() in mapa_clean:
+                out_chars.append(mapa_clean[ch.lower()]); sub_counter[(ch, mapa_clean[ch.lower()])] += 1; total_subs += 1; replaced = True
+        if not replaced:
+            out_chars.append(ch)
+    else:
+        out_chars.append(ch)
+
+final_text_mapped = "".join(out_chars)
+
+# salvar resultado mapeado
+out_path_mapped = "final_reconstructed_mapped.txt"
+with open(out_path_mapped, "w", encoding="utf-8") as f:
+    f.write(final_text_mapped)
+
+# relatório + imprimir resultado mapeado (sempre)
+print("\n[RESULT] Passo 14 — Texto final MAPEADO (aplicado mapa_substituicao às maiúsculas remanescentes):")
+print(f"[RESULT] Arquivo salvo: {out_path_mapped}\n")
+
+if total_subs == 0:
+    print("[RESULT] Nenhuma substituição aplicada (nenhuma letra maiúscula mapeável encontrada).")
+else:
+    print(f"[RESULT] Total de substituições aplicadas: {total_subs}\n")
+    print("[RESULT] Substituições por par (ORIG -> DEST):")
+    for (orig, dest), cnt in sub_counter.most_common():
+        print(f"  {orig} -> {dest}  : {cnt}")
+
+print("\n[RESULT] --- INÍCIO DO TEXTO MAPEADO ---\n")
+print(final_text_mapped)
+print("\n[RESULT] --- FIM DO TEXTO MAPEADO ---\n")
+
+if DEBUG:
+    print("[DEBUG] Passo 14 concluído.")
+else:
+    print("[RESULT] Passo 14 concluído.")
+# Fim do pipeline

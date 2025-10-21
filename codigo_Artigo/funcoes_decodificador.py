@@ -1,18 +1,29 @@
 # ================================================================
 # funcoes_decodificador.py — funções utilitárias usadas por decrypt.py
-# Alteração: associar_palavras_com_posicao agora normaliza e filtra
-#            mantendo apenas letras; trata apóstrofos como pedido.
+#
+# Contém funções para:
+#  - padronizar sequências para 8 bits
+#  - decodificar via dicionário binário->caractere
+#  - associar palavras a posições (Passo 4) com tratamento de '--', '-', "'"
+#  - ordenar palavras em blocos intercalados (Passo 5)
+#  - gerar e aplicar mapeamentos (Passos 6..10)
+#  - cálculo de impacto e busca de candidatas compatíveis
+#  - restauração por posição (Passo 11/13)
+#  - aplicar mapeamento a texto completo (Passo 14 helper)
 # ================================================================
 
 from collections import defaultdict
 import unicodedata
 import re
 
+# ---------------------------
+# Passo 2: padronização 8 bits
+# ---------------------------
 def padronizar_para_8bits(sequencias):
     """
     Recebe lista de sequências (strings) e retorna lista onde cada sequência
     foi 'padronizada' para múltiplos de 8 bits, adicionando zeros à esquerda.
-    Também remove espaços antes da padronização.
+    Também remove espaços antes da padronização (comportamento do pipeline).
     """
     sequencias_padronizadas = []
     for seq in sequencias:
@@ -24,6 +35,9 @@ def padronizar_para_8bits(sequencias):
     return sequencias_padronizadas
 
 
+# ---------------------------
+# Passo 3: buscar e substituir por dicionário bin->char
+# ---------------------------
 def buscar_e_substituir_por_dicionario(sequencias_padronizadas, caracteres_printaveis, unknown_char="?"):
     """
     Converte cada sequência binária (múltiplos de 8 bits) em texto usando
@@ -48,6 +62,9 @@ def buscar_e_substituir_por_dicionario(sequencias_padronizadas, caracteres_print
     return resultados
 
 
+# ---------------------------
+# Helpers de limpeza / normalização para Passo 4
+# ---------------------------
 def _remover_acentos(s: str) -> str:
     """
     Normaliza string Unicode e remove marcas diacríticas (acentos).
@@ -57,68 +74,95 @@ def _remover_acentos(s: str) -> str:
     return ''.join(ch for ch in nkfd if not unicodedata.combining(ch))
 
 
-def _limpar_token_por_regras(token: str) -> str:
+def _limpar_token_por_regras(token: str) -> (str, str):
     """
-    Aplica as regras solicitadas para limpar um token:
-      1) Se existir apóstrofo "'" seguido de letra, corta no primeiro apóstrofo.
-         Ex: "HAHS'S" -> "HAHS"
+    Aplica as regras solicitadas para limpar um token e retorna (token_limpo, suffix).
+    Regras aplicadas:
+      1) Procura (na prioridade): duplo traço '--', apóstrofo ("'", "’", "`"), ou traço '-'.
+         - Se o símbolo for seguido de letra, corta no símbolo e devolve o sufixo removido
+           (incluindo o símbolo) como `suffix`. Ex: "HAHS'S" -> ("HAHS", "'S"),
+           "WORD-ING" -> ("WORD", "-ING"), "X--Y" -> ("X", "--Y").
+         - Se o símbolo existir mas NÃO for seguido de letra, remove apenas o símbolo.
       2) Remove acentos (normalização).
-      3) Mantém apenas letras A-Z (removendo vírgulas, pontos, números, parênteses, etc).
-      4) Retorna string resultante (pode ser vazia).
-    Observação: preserva capitalização original (não força lower/upper).
+      3) Mantém apenas letras A-Z (remove vírgulas, pontos, números, parênteses, etc).
+      4) Retorna token_limpo (pode ser string vazia) e suffix (string com o símbolo+resto ou "").
+    Observação: preserva capitalização original (não converte para lower/upper).
     """
     if not token:
-        return ""
+        return "", ""
 
-    # 1) cortar no primeiro apóstrofo se houver
-    if "'" in token:
-        token = token.split("'", 1)[0]
+    suffix = ""
+    # procurar primeiro ocorrência dentre '--' ou um dos símbolos (' \' \u2019 ` -')
+    # a regex prioriza '--' colocando-o primeiro
+    m = re.search(r"(--|[\'\u2019`-])", token)
+    if m:
+        pos = m.start()
+        sym = m.group(1)  # pode ser '--' ou um símbolo único
+        sym_len = len(sym)
+        # se símbolo for seguido de letra (aceitamos acentuadas), cortamos e guardamos o sufixo
+        if pos + sym_len < len(token) and re.match(r"[A-Za-z\u00C0-\u017F]", token[pos + sym_len]):
+            suffix = token[pos:]  # inclui o(s) símbolo(s) e o resto
+            token = token[:pos]
+        else:
+            # se não há letra depois, removemos apenas o(s) símbolo(s)
+            token = token[:pos] + token[pos+sym_len:]
 
-    # 2) remover acentos
-    token = _remover_acentos(token)
+    # remover acentos
+    token_sem_acentos = _remover_acentos(token)
 
-    # 3) manter apenas letras (A-Z, a-z) — remove todo o resto
-    token = re.sub(r'[^A-Za-z]', '', token)
+    # manter apenas letras
+    token_limpo = re.sub(r'[^A-Za-z]', '', token_sem_acentos)
 
-    return token
+    return token_limpo, suffix
 
 
+# ---------------------------
+# Passo 4 - associar palavras com posição (devolve original_lines_by_pos)
+# ---------------------------
 def associar_palavras_com_posicao(sequencias):
     """
     Passo 4 - Associar cada linha a uma palavra e lembrar a posição.
 
-    Comportamento atualizado:
-      - Une todas as sequências decodificadas (remove \n e \r antes de processar).
-      - Substitui espaços por quebras de linha (como antes).
+    Comportamento:
+      - Une as sequências decodificadas (remove \r).
+      - Substitui espaços por quebras de linha para criar tokens (mantendo lógica anterior).
       - Para cada linha/token:
-          * Se existir apóstrofo (') corta no apóstrofo (ex: HAHS'S -> HAHS)
-          * Remove acentos
-          * Remove qualquer caractere que não seja letra (pontuação, números, etc.)
-      - Retorna lista de tuplas (posicao_original, palavra_limpa) com posições 0-based.
+          * guarda a linha original em original_lines_by_pos[idx] (antes da limpeza)
+          * aplica regras de limpeza com apóstrofo/traço/-- (sufixo)
+          * se resultado não-vazio, adiciona (idx, token_limpo) em palavras_pos
+      - idx é incrementado para cada token (mesmo quando limpeza gera vazio — preserva posições)
+    Retorna:
+      - palavras_pos: lista de (posicao_original, palavra_limpa)
+      - original_lines_by_pos: dict posicao -> linha_original (string)
     """
     texto_unido = "".join(seq.replace("\r", "") for seq in sequencias)
-    # substitui espaços por quebras de linha (mantendo lógica anterior)
     texto_formatado = texto_unido.replace(" ", "\n")
 
     palavras_pos = []
+    original_lines_by_pos = {}
     idx = 0
+
     for linha in texto_formatado.splitlines():
+        linha_original = linha
         linha = linha.strip()
+        original_lines_by_pos[idx] = linha_original
+
         if not linha:
             idx += 1
             continue
 
-        # aplicar limpeza por token (trata apóstrofo e filtra apenas letras)
-        token_limpo = _limpar_token_por_regras(linha)
+        token_limpo, suffix = _limpar_token_por_regras(linha)
 
         if token_limpo:
             palavras_pos.append((idx, token_limpo))
-        # mesmo que o token limpo seja vazio, contamos a posição (idx incrementa)
         idx += 1
 
-    return palavras_pos
+    return palavras_pos, original_lines_by_pos
 
 
+# ---------------------------
+# Passo 5 - ordenando palavras por tamanho em blocos (intercalado)
+# ---------------------------
 def ordenar_palavras_por_tamanho_em_blocos(palavras_pos):
     """
     Agrupa palavras por comprimento mantendo (pos, palavra) e produz:
@@ -145,14 +189,13 @@ def ordenar_palavras_por_tamanho_em_blocos(palavras_pos):
     return blocos, flat
 
 
+# ---------------------------
+# Aplicação de substituições por bloco (utilitária)
+# ---------------------------
 def aplicar_substitucoes_por_bloco(blocos, flat, top_words, bloco_index=0, apply_scope='block', used_top_words=None):
     """
     Gera mapeamentos usando APENAS as palavras do bloco `bloco_index`
-    e aplica as substituições conforme `apply_scope`:
-      - 'block' -> aplica somente no bloco
-      - 'all' -> aplica em todo o flat
-
-    used_top_words: set opcional de palavras do top_words já usadas (para não reutilizar)
+    e aplica as substituições conforme `apply_scope`.
     Retorna (palavras_substituidas_pos, mapa)
     """
     if not isinstance(top_words, dict):
@@ -177,7 +220,6 @@ def aplicar_substitucoes_por_bloco(blocos, flat, top_words, bloco_index=0, apply
 
     bloco = blocos[bloco_index]
     for pos, palavra in bloco:
-        # regra: não processar palavras já totalmente minúsculas
         if palavra.islower():
             continue
 
@@ -188,7 +230,6 @@ def aplicar_substitucoes_por_bloco(blocos, flat, top_words, bloco_index=0, apply
         for c_cifrado, c_claro in zip(palavra, candidata):
             c_claro_lower = c_claro.lower()
             if c_cifrado.islower():
-                # não criamos mapeamentos para caracteres já minúsculos
                 continue
             if c_cifrado in mapa and mapa[c_cifrado] != c_claro_lower:
                 continue
@@ -196,7 +237,6 @@ def aplicar_substitucoes_por_bloco(blocos, flat, top_words, bloco_index=0, apply
                 continue
             mapa[c_cifrado] = c_claro_lower
             letras_usadas.add(c_claro_lower)
-        # marca candidata como usada
         used_top_words.add(candidata)
 
     pos_to_word = {pos: pw for pos, pw in flat}
@@ -219,25 +259,13 @@ def aplicar_substitucoes_por_bloco(blocos, flat, top_words, bloco_index=0, apply
 # ---------------------------
 # Funções step-by-step para aplicar 1 mapeamento de cada vez
 # ---------------------------
-
 def gerar_mapeamentos_por_bloco(bloco, top_words, used_top_words=None):
-    """
-    Gera lista ordenada de mapeamentos (cifrado -> claro) a partir das palavras do bloco.
-    Regras:
-      - pula palavras totalmente minúsculas (não substitui).
-      - não cria mapeamento para caracteres cifrados que já estão minúsculos.
-      - não reutiliza top_words já em used_top_words.
-      - evita sobrescrever cifrados ou reutilizar destino já usado.
-    Retorna lista de (c_cifrado, c_claro).
-    """
     if not isinstance(top_words, dict):
         raise TypeError("top_words deve ser um dict palavra->rank")
-
     if used_top_words is None:
         used_top_words = set()
 
     top_sorted = sorted(top_words.items(), key=lambda item: item[1])
-
     mapa = {}
     letras_usadas = set()
     mapeamentos = []
@@ -251,11 +279,9 @@ def gerar_mapeamentos_por_bloco(bloco, top_words, used_top_words=None):
     for pos, palavra in bloco:
         if palavra.islower():
             continue
-
         candidata = primeira_candidata_disponivel(len(palavra))
         if not candidata:
             continue
-
         for c_cifrado, c_claro in zip(palavra, candidata):
             c_claro_lower = c_claro.lower()
             if c_cifrado.islower():
@@ -270,36 +296,25 @@ def gerar_mapeamentos_por_bloco(bloco, top_words, used_top_words=None):
             mapa[c_cifrado] = c_claro_lower
             letras_usadas.add(c_claro_lower)
             mapeamentos.append((c_cifrado, c_claro_lower))
-
         used_top_words.add(candidata)
 
     return mapeamentos
 
 
 def gerar_mapeamentos_para_primeira_palavra(bloco, top_words, used_top_words=None):
-    """
-    Gera mapeamentos apenas para a PRIMEIRA palavra do bloco que não esteja
-    totalmente em minúsculas. Retorna (mapeamentos, candidata_word).
-    Respeita used_top_words (não reutilizar palavras do dicionário).
-    NÃO cria mapeamento para caracteres cifrados já em minúsculo.
-    """
     if not isinstance(top_words, dict):
         raise TypeError("top_words deve ser um dict palavra->rank")
-
     if used_top_words is None:
         used_top_words = set()
 
-    # encontra a primeira palavra do bloco que não esteja toda em minúsculas
     primeira = None
-    primeira_pos = None
     for pos, palavra in bloco:
         if not palavra.islower():
             primeira = palavra
-            primeira_pos = pos
             break
 
     if primeira is None:
-        return [], None  # nenhuma palavra válida no bloco
+        return [], None
 
     top_sorted = sorted(top_words.items(), key=lambda item: item[1])
 
@@ -316,55 +331,40 @@ def gerar_mapeamentos_para_primeira_palavra(bloco, top_words, used_top_words=Non
     mapeamentos = []
     for c_cifrado, c_claro in zip(primeira, candidata):
         c_claro_lower = c_claro.lower()
-        # evita mapeamento identidade e evita mapear cifrados já minúsculos
         if c_cifrado.islower():
             continue
         if c_cifrado == c_claro_lower:
             continue
         mapeamentos.append((c_cifrado, c_claro_lower))
 
-    # retornamos também a candidata para que o chamador possa marcar used_top_words
     return mapeamentos, candidata
 
 
 def aplicar_um_mapeamento_em_posicoes(flat, mapeamento, pos_targets):
-    """
-    Aplica UM mapeamento (cifrado -> claro) nas posições indicadas.
-    Retorna novo flat.
-    """
     c_cifrado, c_claro = mapeamento
     partial_map = {c_cifrado: c_claro}
     pos_to_word = {pos: pw for pos, pw in flat}
-
     for pos in pos_targets:
         palavra = pos_to_word.get(pos, "")
         if not palavra:
             continue
         nova = "".join(partial_map.get(ch, ch) for ch in palavra)
         pos_to_word[pos] = nova
-
     novo_flat = [(pos, pos_to_word.get(pos, "")) for pos, _ in flat]
     return novo_flat
 
 
 def aplicar_mapeamentos_em_posicoes(flat, mapeamentos, pos_targets):
-    """
-    Aplica múltiplos mapeamentos (lista de (cifrado, claro)) nas posições alvo.
-    Retorna novo flat.
-    """
     if not mapeamentos:
         return flat.copy()
-
     parcial = {c: v for c, v in mapeamentos}
     pos_to_word = {pos: pw for pos, pw in flat}
-
     for pos in pos_targets:
         palavra = pos_to_word.get(pos, "")
         if not palavra:
             continue
         nova = "".join(parcial.get(ch, ch) for ch in palavra)
         pos_to_word[pos] = nova
-
     novo_flat = [(pos, pos_to_word.get(pos, "")) for pos, _ in flat]
     return novo_flat
 
@@ -372,20 +372,7 @@ def aplicar_mapeamentos_em_posicoes(flat, mapeamentos, pos_targets):
 # ---------------------------
 # Impacto / seleção de próxima candidata
 # ---------------------------
-
 def calcular_impacto_por_bloco(bloco, flat_before, flat_after, exclude_positions=None):
-    """
-    Calcula impacto por palavra no bloco:
-      - bloco: lista de (pos, palavra_original_do_bloco)
-      - flat_before: lista linear [(pos, palavra)] antes da substituição
-      - flat_after:  lista linear [(pos, palavra)] depois da substituição
-      - exclude_positions: conjunto de posições a serem ignoradas (opcional)
-
-    Regras:
-      - ignora posições em exclude_positions
-      - ignora entradas cujo 'after' já esteja completamente em minúsculas
-    Retorna lista de dicts ordenada por diff_frac desc, diff_count desc, pos asc.
-    """
     if exclude_positions is None:
         exclude_positions = set()
     else:
@@ -426,21 +413,6 @@ def calcular_impacto_por_bloco(bloco, flat_before, flat_after, exclude_positions
 
 
 def encontrar_candidata_compatível(palavra_atual, top_sorted, mapa_existente, letras_usadas, used_top_words=None):
-    """
-    Dado uma palavra atual (contendo já substituições parciais), busca a primeira
-    candidata em top_sorted (lista de (word, rank)) com mesmo comprimento que seja
-    compatível com o mapa_existente e letras_usadas, e que NÃO esteja em used_top_words.
-
-    Regras:
-      - se palavra_atual estiver totalmente minúscula -> retorna (None, []).
-      - se em alguma posição palavra_atual[i] for minúscula, a candidata deve ter
-        exatamente o mesmo caractere (em lower) naquela posição.
-      - para posições cujo caractere atual é maiúsculo (cifrado), permite-se criar
-        novos mapeamentos: desde que o destino não esteja em letras_usadas e não
-        conflite com mapa_existente.
-      - não tenta criar mapeamentos para caracteres cifrados que já sejam minúsculos.
-    Retorna (candidata_word, mapeamentos_novos_list) ou (None, []) se não achar.
-    """
     if palavra_atual.islower():
         return None, []
 
@@ -460,7 +432,6 @@ def encontrar_candidata_compatível(palavra_atual, top_sorted, mapa_existente, l
         for i, (c_atual, c_cand) in enumerate(zip(palavra_atual, w)):
             c_claro_lower = c_cand.lower()
 
-            # se a posição já está revelada (minúscula) -> deve coincidir
             if c_atual.islower():
                 if c_atual != c_claro_lower:
                     possivel = False
@@ -468,7 +439,6 @@ def encontrar_candidata_compatível(palavra_atual, top_sorted, mapa_existente, l
                 else:
                     continue
 
-            # se o caractere atual possui mapeamento existente -> deve ser consistente
             if c_atual in mapa_existente:
                 if mapa_existente[c_atual] != c_claro_lower:
                     possivel = False
@@ -476,12 +446,10 @@ def encontrar_candidata_compatível(palavra_atual, top_sorted, mapa_existente, l
                 else:
                     continue
 
-            # se chegamos aqui, posição livre: não permitir destino já usado
             if c_claro_lower in letras_usadas:
                 possivel = False
                 break
 
-            # não criar mapeamento para cifrados que já são minúsculos (defesa)
             if c_atual.islower():
                 possivel = False
                 break
@@ -494,11 +462,48 @@ def encontrar_candidata_compatível(palavra_atual, top_sorted, mapa_existente, l
     return None, []
 
 
+# ---------------------------
+# Passo 14 helper: aplicar mapeamento a um texto completo
+# ---------------------------
+def aplicar_mapeamento_em_texto(texto: str, mapa_substituicao: dict) -> str:
+    """
+    Aplica o mapa_substituicao a um texto completo, substituindo apenas
+    caracteres MAIÚSCULOS que existam como chaves no mapa_substituicao.
+    Chaves esperadas: caracteres simples (ex: 'T') -> valores: 'a' (lowercase).
+    - percorre cada caractere do texto; se MAIÚSCULO e existe mapping (key)
+      substitui pelo valor.
+    - retorna o texto resultante.
+    """
+    if not mapa_substituicao:
+        return texto
+
+    # normalizar mapa: apenas pares (1-char -> 1-char) válidos
+    mapa_clean = {k: v for k, v in mapa_substituicao.items() if isinstance(k, str) and isinstance(v, str) and len(k) == 1 and len(v) == 1}
+
+    if not mapa_clean:
+        return texto
+
+    out = []
+    for ch in texto:
+        if ch.isupper():
+            # checar chave exatamente igual (maiusc), depois upper/lower por segurança
+            if ch in mapa_clean:
+                out.append(mapa_clean[ch])
+            elif ch.upper() in mapa_clean:
+                out.append(mapa_clean[ch.upper()])
+            elif ch.lower() in mapa_clean:
+                out.append(mapa_clean[ch.lower()])
+            else:
+                out.append(ch)
+        else:
+            out.append(ch)
+    return "".join(out)
+
+
+# ---------------------------
+# Passo 11 helper: restauração por posição
+# ---------------------------
 def restaurar_por_posicao(palavras_pos):
-    """
-    Recebe lista de (posicao, palavra) e retorna lista com as palavras
-    posicionadas na ordem original (index -> palavra).
-    """
     if not palavras_pos:
         return []
     max_pos = max(pos for pos, _ in palavras_pos)
