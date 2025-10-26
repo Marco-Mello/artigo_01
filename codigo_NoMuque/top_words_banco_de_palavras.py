@@ -24,7 +24,7 @@ top_words_banco_de_palavras = {
 'OR': 22,
 'HIS': 23,
 'FROM': 24,
-'AT': 25, #
+'AT': 25,
 'WHICH': 26,
 'BUT': 27,
 'HAVE': 28,
@@ -51,27 +51,23 @@ top_words_banco_de_palavras = {
 'SO': 49,
 'NO': 50,
 
-#Texto 1 - Palavras necessárias para decifrar a mensagem do texto 1
-'CEASE': 1001,
-'ARMS': 1002,
+#Texto 1 - Palavras necessárias para completar texto 1
+#'DAY': 1001,
+#'ARMS': 1002,
+#'BLEAK': 1003,
+#'CEASE': 1004,
+#'SPECIES': 1005,
+#'EXPLORATION': 1006,
+#'ENLIGHTENMENT': 1007,
 
-# Palavras para completar a mensagem do texto 1
-#'ENLIGHTENMENT': 1005,
-#'EXPLORATION': 1004,
-#'SPECIES': 1000,
-#'BLEAK': 1006,
-#'DAY': 999,
-
-#Texto 2 - Palavras necessárias para decifrar a mensagem do texto 2 e completar
-'RESPONSIBILITY': 2002,
-
-# Palavras para completar a mensagem do texto 2
-#'KINDLY': 2006,
-#'DISTINGUISHABLE': 2001,
-#'JOY': 2007,
-#'FREQUENT': 2005,
-#'EXPLORER': 2004,
-#'CIVILIZATION': 3001,
+#Texto 2 - Palavras necessárias para completar texto 2
+#'JOY': 2001,
+#'KINDLY': 2002,
+#'EXPLORER': 2003,
+#'FREQUENT': 2004,
+#'CIVILIZATION': 2005,
+#'RESPONSIBILITY': 2006,
+#'DISTINGUISHABLE': 2007,
 
 
 
