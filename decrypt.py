@@ -7,7 +7,7 @@ fd.limpar_pastas_de_trabalho()
 # PASSO 0 — Configurações
 # -----------------------------
 # Arquivos / parâmetros principais (edite se necessário)
-BINARIO_SRC = "encoded.txt"
+BINARIO_SRC = "encoded_01.txt"
 FONTE = "mensagens/5_4_3_2_1_0_encoded_em_linhas.py"
 TOP_WORDS = "top_words_banco_de_palavras.py"
 THRESHOLDS = (75.0, 66.0, 50.0, 33.0, 25.0, 10.0)

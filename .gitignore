@@ -1,0 +1,6 @@
+# Ignorar diretórios de trabalho e saída
+decifrados/
+mapeamentos/
+mensagens/
+palavrasUsadas/
+__pycache__/
