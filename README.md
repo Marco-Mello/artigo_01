@@ -53,8 +53,7 @@ O fluxograma abaixo (armazenado em `fluxograma.svg`) representa visualmente essa
 ## 🧰 Requisitos
 
 - Python 3.8 ou superior  
-- Bibliotecas padrão (nenhuma dependência externa)  
-- Opcional: Inkscape (para converter o SVG em PDF caso use o artigo em LaTeX)
+- Bibliotecas padrão (nenhuma dependência externa)
 
 ---
 
