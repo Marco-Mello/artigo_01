@@ -1,204 +1,123 @@
-# Decrypt Pipeline — README
+# 🧩 Aplicação de Método Heurístico para Decifração de Mensagens Utilizando Python
 
-Este documento descreve o funcionamento do pipeline contido em `decrypt.py` e nas funções auxiliares em `funcoes_decodificador.py`, organizado por passos (1..14). Use este arquivo como referência rápida para entender o fluxo, parâmetros, arquivos gerados e decisões importantes.
-
----
-
-## Arquivos principais
-
-- `decrypt.py` — script principal que conduz o pipeline (Passos 1..14).
-- `funcoes_decodificador.py` — funções utilitárias chamadas pelo pipeline.
-- `caracteres_printaveis.py` — dicionário binário (8 bits) -> caractere.
-- `top_words.py` — dicionário de palavras frequentes com ranking.
-- `encoded.txt` — entrada de exemplo (texto a ser processado).
-- `final_map.py` — arquivo gerado contendo o mapeamento acumulado (checkpoint).
-- `candidatas_encolhidas.py` — arquivo gerado contendo palavras do `top_words` já usadas.
-- `final_reconstructed.txt` — saída reconstruída com pontuação/sufixos (Passo 13).
-- `final_reconstructed_mapped.txt` — saída final com aplicação do mapa (Passo 14).
+Este projeto implementa um **método heurístico de decifração automatizada** de mensagens codificadas em **binário ASCII**, inspirado em técnicas clássicas de análise de frequência e mapeamento posicional.  
+A ferramenta foi desenvolvida em **Python** e estruturada como um **pipeline modular**, permitindo acompanhar cada etapa do processo de decifração — desde a leitura do arquivo binário até a geração do texto parcialmente traduzido.
 
 ---
 
-## Execução
+## 🧠 Objetivo
 
-```bash
-python decrypt.py
+O objetivo deste projeto é demonstrar como **técnicas heurísticas** e **análise de frequência de palavras** podem ser aplicadas para reconstruir textos cifrados de forma incremental.  
+O método implementado identifica padrões linguísticos comuns na língua inglesa (como as palavras *A*, *I*, *IN*, *IS*, *THE*, *AND*, *FOR* etc.) e utiliza essas recorrências para inferir substituições de caracteres, refinando o texto a cada iteração.
+
+---
+
+## ⚙️ Estrutura do Projeto
+
+```
+📦 projeto-decifracao
+├── decrypt.py                         # Script principal (orquestra o pipeline)
+├── funcoes_decodificador.py           # Módulo com todas as funções do processo
+├── top_words_banco_de_palavras.py     # Banco de palavras mais comuns em inglês
+├── encoded_EXIST.txt                  # Arquivo de entrada (mensagem codificada em binário)
+├── fluxograma.svg                     # Diagrama do pipeline de decifração
+│
+├── mensagens/                         # Saída intermediária (tokens e matrizes)
+├── mapeamentos/                       # Arquivos com mapeamentos letra→letra
+├── decifrados/                        # Arquivos decifrados parcialmente
+├── palavrasUsadas/                    # Palavras aplicadas por subloop
+│
+└── README.md                          # Este arquivo
 ```
 
-Parâmetros principais (no topo de `decrypt.py`):
-- `DEBUG` — True/False para prints detalhados e pausas interativas.
-- `arquivo_entrada` — nome do arquivo de entrada (default: `encoded.txt`).
-- `passo_threshold` — passo para geração dinâmica de thresholds (ex.: 2).
-- `limite_threshold` — limite inferior para thresholds (inclusive).
+---
+
+## 🧩 Funcionamento Geral
+
+O pipeline de decifração segue as seguintes etapas principais:
+
+1. **Leitura e Conversão:** Importa o arquivo binário e converte cada sequência de bits em caracteres ASCII.  
+2. **Tokenização e Normalização:** Divide o texto em tokens e organiza-os por posição.  
+3. **Ordenação:** Classifica tokens por comprimento e frequência.  
+4. **Mapeamento Heurístico:**  
+   - Identifica palavras de **1 letra** (A, I);  
+   - Testa combinações de **2 letras** (AS, AT, IN, IS);  
+   - Aplica fallback de **3 letras** (THE, AND, FOR, NOT).  
+5. **Análise:** Calcula métricas de progresso (% de texto traduzido e % de palavras reconhecidas).  
+6. **Geração do Texto Final:** Exporta o arquivo `encoded_decifrado.txt` com o melhor resultado.
+
+O fluxograma abaixo (armazenado em `fluxograma.svg`) representa visualmente essas etapas.
 
 ---
 
-## Descrição por passos
+## 🧰 Requisitos
 
-### ================================================================== ###
-### Passo 1 - Separando cada caractere por linha
-### ================================================================== ###
-
-- Lê `encoded.txt` inteiro.
-- Usa `string.printable` (sem whitespace final) para montar uma expressão regular.
-- Captura todas as sequências contínuas de caracteres "printáveis" e salva em `sequencias`.
-- Objetivo: extrair blocos relevantes de texto/bytes que serão padronizados.
-
-### =================================================================== ###
-### Passo 2 - Padronizando o conteúdo para binário de 8 bits
-### =================================================================== ###
-
-- Remove espaços internos nas sequências e completa com zeros à esquerda até que o comprimento seja múltiplo de 8.
-- Resultado: `sequencias_padronizadas` (cada item representa uma série de bytes alinhada a 8 bits).
-- Função: `padronizar_para_8bits` em `funcoes_decodificador.py`.
-
-### =================================================================== ###
-### Passo 3 - Busca e substituição no dicionário
-### =================================================================== ###
-
-- Converte cada sequência 8-bit em caracteres usando `caracteres_printaveis` (map bin->char).
-- Produz a lista `decodificadas` com as linhas de texto decodificadas.
-- Função: `buscar_e_substituir_por_dicionario`.
-
-### =================================================================== ###
-### Passo 4 - Associar cada linha a uma palavra e lembrar a posição
-### =================================================================== ###
-
-- Une as linhas decodificadas em um único texto e substitui espaços por quebras de linha.
-- Para cada linha/tokens:
-  - Guarda a linha original em `original_lines_by_pos` (útil para reconstrução posterior).
-  - Aplica regras de limpeza:
-    - Prioridade de símbolos: `--`, apóstrofos (`'`, `’`, `` ` ``), traço `-`.
-    - Se o símbolo for seguido de letra, corta o token no símbolo e guarda o sufixo (ex.: `HAHS'S` -> `HAHS` + `"'S"`).
-    - Remove acentos e qualquer caractere que não seja letra.
-  - Armazena `(posicao, palavra_limpa)` em `palavras_pos`.
-- Função: `associar_palavras_com_posicao` (retorna `palavras_pos`, `original_lines_by_pos`).
-
-### =================================================================== ###
-### Passo 5 - Ordenando palavras por comprimento (modo em blocos)
-### =================================================================== ###
-
-- Agrupa palavras por comprimento e cria `blocos` (rodadas) intercaladas com no máximo 1 palavra de cada tamanho por rodada.
-- Também gera `palavras_ordenadas_pos` (flat) — lista única intercalada usada pelo pipeline.
-- Função: `ordenar_palavras_por_tamanho_em_blocos`.
-
-### =================================================================== ###
-### Passo 6 - Aplicar PRIMEIRO mapeamento do Bloco 1 (apenas um mapeamento)
-### =================================================================== ###
-
-- Gera mapeamentos somente para a primeira palavra válida do bloco 1, usando `top_words` (maior rank disponível com mesmo comprimento).
-- Aplica apenas o **primeiro** mapeamento gerado neste bloco (para evitar aplicar tudo de uma vez).
-- Atualiza `mapa_substituicao` e marca a candidata como usada (em `used_top_words`) se válida.
-- Função: `gerar_mapeamentos_para_primeira_palavra` + `aplicar_um_mapeamento_em_posicoes`.
-
-### =================================================================== ###
-### Passo 7 - Iterativo no Bloco 1
-### =================================================================== ###
-
-- Itera dentro do Bloco 1:
-  - Recalcula impacto por palavra (`calcular_impacto_por_bloco`) com base no estado antes/depois.
-  - Escolhe a palavra mais "impactada" (maior `diff_frac`).
-  - Busca a primeira candidata compatível em `top_words` com `encontrar_candidata_compatível`.
-  - Filtra mapeamentos conflitantes (não sobrescrever mapeamentos existentes; não usar destinos já reservados).
-  - Aplica mapeamentos válidos somente dentro do bloco e atualiza `mapa_substituicao`.
-  - Marca a candidata como usada.
-- O loop para quando não há candidatas compatíveis restantes.
-
-### =================================================================== ###
-### Passo 8 - Salvar mapeamento acumulado e palavras candidatas usadas
-### =================================================================== ###
-
-- Salva `mapa_substituicao` em `final_map.py` e `used_top_words` em `candidatas_encolhidas.py` (checkpoints JSON-like).
-- Função interna: `_salvar_checkpoints`.
-
-### =================================================================== ###
-### Passo 10 - Varrer blocos por múltiplos thresholds (dinâmico)
-### =================================================================== ###
-
-- Gera `thresholds` dinamicamente (100 -> `limite_threshold`, passo = `passo_threshold`).
-- Para cada threshold, percorre **todos** os blocos (inclui o bloco 1 na primeira rodada):
-  1. Aplica o `final_map` (checkpoint atual) a todas as palavras do bloco.
-  2. Calcula `ratio` por palavra (nº letras minúsculas / comprimento).
-  3. Para palavras com `ratio >= threshold`, tenta encontrar candidata compatível e aplicar mapeamentos válidos.
-- Regras importantes:
-  - Nunca substitui uma letra já minúscula.
-  - Não reutiliza palavras do `top_words` já marcadas em `used_top_words`.
-  - Não permite que duas chaves diferentes mapeiem para o mesmo destino (evita conflito de destino).
-  - Atualiza checkpoints após terminar cada threshold.
-- Observação: thresholds podem ser parametrizados (ex.: `passo_threshold=2`, `limite_threshold=34`).
-
-### =================================================================== ###
-### Passo 11 - Exibir mapeamento acumulado e sequência de palavras por posição
-### =================================================================== ###
-
-- Restaura a lista por posição (`restaurar_por_posicao`) e imprime a sequência de palavras na ordem correta (sempre, independente de `DEBUG`).
-- Em modo `DEBUG`, imprime também o mapa acumulado e o flat detalhado.
-
-### =================================================================== ###
-### Passo 12 - Percentual de palavras do texto final presentes em top_words
-### =================================================================== ###
-
-- Calcula quantos tokens do texto final (contando repetições) existem em `top_words`.
-- Imprime totais, porcentagem, e listas (todas as palavras encontradas e não encontradas, por frequência).
-- Usa normalização (remoção de acentos e lower) para comparar com `top_words`.
-
-### =================================================================== ###
-### Passo 13 - Reconstruir texto com pontuação e sufixos (apóstrofo/traço/--)
-### =================================================================== ###
-
-- Usa `original_lines_by_pos` (armazenado no Passo 4) para reinserir:
-  - a pontuação original ao redor da palavra;
-  - o sufixo cortado no Passo 4 (ex.: `"HAHS'S"` -> `"HAHS"` na etapa de limpeza; aqui devolve `"HAHS'S"` ou forma compatível);
-- Salva resultado em `final_reconstructed.txt`.
-
-### =================================================================== ###
-### Passo 14 - Aplicar mapeamento às maiúsculas remanescentes e imprimir
-### =================================================================== ###
-
-- Carrega `final_map.py` (se existir) ou usa `mapa_substituicao` em memória.
-- Aplica substituição **apenas** em caracteres MAIÚSCULOS do `final_text` — substitui se houver mapeamento.
-- Salva `final_reconstructed_mapped.txt` e imprime o conteúdo e um resumo de substituições.
-- Função utilitária: `aplicar_mapeamento_em_texto` (disponível em `funcoes_decodificador.py`).
+- Python 3.8 ou superior  
+- Bibliotecas padrão (nenhuma dependência externa)  
+- Opcional: Inkscape (para converter o SVG em PDF caso use o artigo em LaTeX)
 
 ---
 
-## Notas e regras importantes
+## 🚀 Como Executar
 
-- Nunca reatribuir um destino (letra clara) que já esteja reservado no mapa acumulado.
-- Não criar mapeamentos para caracteres que já são minúsculos.
-- Ao buscar candidatas, se uma posição já tiver letras reveladas (minúsculas), a candidata deve ter exatamente essas letras nas mesmas posições.
-- Palavras não pertencentes ao `top_words` (após normalização) não podem ser marcadas como usadas.
-- O pipeline é interativo quando `DEBUG = True` (pausas `input()` entre iterações); pode ser automatizado definindo `DEBUG = False`.
+1. **Clone o repositório:**
+   ```bash
+   git clone https://github.com/<seu-usuario>/projeto-decifracao.git
+   cd projeto-decifracao
+   ```
 
----
+2. **Adicione a mensagem binária:**
+   - Coloque o arquivo codificado em `encoded_EXIST.txt`.
 
-## Exemplos de saída / artefatos gerados
+3. **Execute o pipeline:**
+   ```bash
+   python decrypt.py
+   ```
 
-- `final_map.py` — contém algo como:
-
-```py
-# -*- coding: utf-8 -*-
-final_map = {
-    "T": "a",
-    "V": "t",
-    "C": "h",
-    ...
-}
-```
-
-- `candidatas_encolhidas.py` — lista JSON das palavras do `top_words` já utilizadas.
-- `final_reconstructed.txt` — texto reconstruído com pontuação e sufixos (antes do mapeamento final).
-- `final_reconstructed_mapped.txt` — texto final com aplicação de `final_map` às maiúsculas remanescentes.
+4. **Confira os resultados:**
+   - Arquivos intermediários: `mensagens/`, `mapeamentos/`, `decifrados/`  
+   - Resultado final: `encoded_decifrado.txt`
 
 ---
 
-## Dicas para depuração e ajustes
+## 📊 Métricas de Avaliação
 
-- Se o pipeline estiver substituindo palavras que não pertencem ao `top_words`, verifique a normalização e o conteúdo de `top_words.py`.
-- Ajuste `passo_threshold` e `limite_threshold` para controlar sensibilidade das iterações.
-- Use `DEBUG = True` para inspecionar iterações passo-a-passo e pausar quando desejar.
+O sistema apresenta duas métricas principais em cada execução:
+
+- **Percentual de palavras reconhecidas:** relação entre palavras existentes no banco e total processado.  
+- **Percentual de texto traduzido:** proporção de caracteres já substituídos por letras decifradas.
+
+Essas métricas permitem comparar versões e acompanhar o avanço da decifração a cada iteração.
 
 ---
 
-## Histórico
+## 🧠 Referências Teóricas
 
-Documentação gerada automaticamente com base na versão atual do pipeline solicitada pelo usuário.
+- *O Jogo da Imitação* (2014) — Contexto histórico da decifração automatizada.  
+- *O Escaravelho de Ouro* — Edgar Allan Poe (1843).  
+- Peter Norvig — *English Letter Frequency Counts: Mayzner Revisited* (2012).  
+- English Experts — *As palavras mais comuns da língua inglesa* (2010s).  
+- L. Possani — *Criptografia: das origens à obra de Edgar Allan Poe* (YouTube, 2025).
+
+---
+
+## 🖼️ Fluxograma do Pipeline
+
+O diagrama abaixo resume o fluxo completo do processo de decifração.
+
+![Fluxograma do Pipeline](fluxograma.svg)
+
+---
+
+## 👨‍💻 Autor
+
+**Marco Mello**  
+Programa de Pós-Graduação em Ciência da Computação — UFABC  
+📧 marcomello.e@gmail.com
+
+---
+
+## 📄 Licença
+
+Este projeto é distribuído sob a licença **MIT**.  
+Sinta-se à vontade para estudar, modificar e expandir o código.
