@@ -141,9 +141,9 @@ Resultados resumidos:
 ---
 
 ## 🖼️ Fluxograma do Pipeline
-
+<div style="text-align: center;">
 <img src="imgs/fluxograma.png" width="25%">
-
+</div>
 ---
 
 ## 👨‍💻 Autor
