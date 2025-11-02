@@ -142,7 +142,7 @@ Resultados resumidos:
 
 ## 🖼️ Fluxograma do Pipeline
 
-![Fluxograma do Pipeline](imgs/fluxograma.png)
+<img src="imgs/fluxograma.png" width="50%">
 
 ---
 
