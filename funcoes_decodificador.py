@@ -1,6 +1,5 @@
 """
 funcoes_decodificador.py
-Versão modular — prints detalhados apenas quando DEBUG=True.
 """
 
 import re
@@ -18,7 +17,6 @@ import shutil
 # -------------------------
 DEBUG = False  # Se True exibe prints detalhados; se False exibe apenas resumos essenciais
 
-# Tentativa de importar banco de palavras (não é obrigatório na importação do módulo)
 try:
     from top_words_banco_de_palavras import top_words_banco_de_palavras  # type: ignore
 except Exception:
@@ -35,7 +33,6 @@ def limpar_pastas_de_trabalho(pastas: list = None):
       - decifrados/
       - mapeamentos/
       - palavrasUsadas/
-    (ou de outras pastas passadas na lista `pastas`).
 
     Mantém as pastas existentes criadas novamente após a limpeza.
     """
@@ -50,7 +47,7 @@ def limpar_pastas_de_trabalho(pastas: list = None):
                 if DEBUG:
                     print(f"[DEBUG] Pasta '{p}' limpa com sucesso.")
             except Exception as e:
-                print(f"⚠️  Erro ao limpar a pasta '{p}': {e}")
+                print(f"Erro ao limpar a pasta '{p}': {e}")
         # recria pasta vazia
         p.mkdir(parents=True, exist_ok=True)
         if DEBUG:
@@ -86,7 +83,6 @@ def _load_matriz_from_py(path: str):
 def _write_map_file(map_dict: Dict[str,str], out_path: Path):
     out_path.parent.mkdir(exist_ok=True, parents=True)
     with out_path.open("w", encoding="utf-8") as f:
-        f.write("# Arquivo gerado automaticamente\n")
         f.write("final_map = {\n")
         for k, v in map_dict.items():
             f.write(f"    {k!r}: {v!r},\n")
@@ -358,7 +354,6 @@ def map_2_letras(arquivo: str, mapping_base: Dict[str,str], duas_letras_token: s
         if DEBUG:
             print(f"[DEBUG] Nenhuma palavra de 2 letras iniciando com '{mapped_first_lower}' foi encontrada.")
         else:
-            # mensagem sucinta em modo padrão
             pass
         return None, None, None
 
@@ -820,11 +815,8 @@ def aplicar_3_letras_sequencial_v2(fonte: str,
                                    top_words_path: str = "top_words_banco_de_palavras.py",
                                    accumulate_between_candidates: bool = False):
     """
-    Versão que processa cada candidate_word repetindo o ciclo (aplicar token -> salvar -> thresholds)
+    Processa cada candidate_word repetindo o ciclo (aplicar token -> salvar -> thresholds)
     e imprime métricas após cada decifrado salvo.
-
-    prefix_base agora default para "" (nenhum prefixo). Se informado, será usado como "PREFIX"
-    (sem acrescentar underscores adicionais).
     """
     if candidate_words is None:
         candidate_words = ["THE","AND","FOR","WAS","NOT","ARE","HIS","BUT","HAD",
@@ -876,8 +868,6 @@ def aplicar_3_letras_sequencial_v2(fonte: str,
     def _make_map_dec_paths(prefix: str, suffix_tag: str):
         """
         Retorna (map_path, dec_path) montando os nomes corretamente dependendo de prefix (possivelmente vazio).
-        Ex: prefix="" -> "THE_step1_final_map.py"
-            prefix="3" -> "3_THE_step1_final_map.py"
         """
         if prefix:
             map_name = f"{prefix}_{suffix_tag}_final_map.py"
@@ -1185,11 +1175,11 @@ def executar_pipeline_decifrado(fonte: str,
 
     if not sucesso_geral:
         if DEBUG:
-            print("\n[DEBUG] ⚠️  Nenhum mapeamento válido foi encontrado em nenhum subloop!")
+            print("\n[DEBUG] Nenhum mapeamento válido foi encontrado em nenhum subloop!")
         return False
 
     if DEBUG:
-        print("\n[DEBUG] ✅ Pelo menos um mapeamento foi encontrado e processado com sucesso.")
+        print("\n[DEBUG] Pelo menos um mapeamento foi encontrado e processado com sucesso.")
     return True
 
 # -------------------------
@@ -1199,13 +1189,9 @@ def analisar_decifrados_completo(top_words_path: str = "top_words_banco_de_palav
                                  decifrados_dir: str = "decifrados",
                                  print_report: bool = True):
     """
-    Agora imprime apenas os arquivos agrupados por etapa (1 letra, 2 letras, 3 letras)
-    e depois mostra o arquivo escolhido (melhor). Não imprime a lista completa antes.
+    Imprime apenas os arquivos agrupados por etapa (1 letra, 2 letras, 3 letras)
+    e depois mostra o arquivo escolhido (melhor).
 
-    Esta versão detecta a etapa a partir do padrão do nome do arquivo gerado:
-      - Etapa 1: arquivos tipo "A_decifrado.py", "I_decifrado.py" (primeiro token 1 letra)
-      - Etapa 2: arquivos tipo "A_AT_decifrado.py", "I_IS_decifrado.py" (contém token de 2 letras)
-      - Etapa 3: arquivos tipo "THE_decifrado.py", "3letters_decifrado.py" (token de 3 letras ou fallback)
     """
     GREEN = "\033[92m"
     RED = "\033[91m"
@@ -1450,16 +1436,15 @@ def imprimir_melhor_texto(decifrados_dir: str = "decifrados",
     # --- Letras mapeadas / faltantes ---
     ALFABETO = set("ABCDEFGHIJKLMNOPQRSTUVWXYZ")
 
-    # 1) Preferir extrair letras mapeadas do combined_map.values() se houver dados válidos
+   
     letras_mapeadas_por_map = set(v.upper() for v in combined_map.values() if isinstance(v, str) and v.strip())
-    # 2) também considerar letras minúsculas efetivamente presentes no texto final
     letras_mapeadas_por_texto = set(ch.upper() for ch in texto_final if ch.islower())
 
     # união das fontes para definir letras mapeadas conhecidas
     letras_mapeadas = letras_mapeadas_por_map.union(letras_mapeadas_por_texto)
     letras_faltantes = sorted(ALFABETO - letras_mapeadas)
 
-    # --- Impressão resumida (sempre) ---
+    
     print("\n================== MAPA DE LETRAS ==================")
     # imprime pares mapeados (encoded -> decoded) se existirem
     if combined_map:
@@ -1550,10 +1535,10 @@ def executar_fallback_3_letras(fonte: str,
         else:
             # se nenhum aplicado, informa sucintamente
             if DEBUG:
-                print("[DEBUG] ❌ Nenhuma aplicação foi encontrada no fallback de 3 letras.")
+                print("[DEBUG] Nenhuma aplicação foi encontrada no fallback de 3 letras.")
         return resultado_fallback
 
     else:
-        print("⚠️ Fallback retornou um formato inesperado:")
+        print("Fallback retornou um formato inesperado:")
         print(resultado_fallback)
         return resultado_fallback

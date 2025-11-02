@@ -67,8 +67,7 @@ if not sucesso:
 # -----------------------------
 # PASSO 5 — Análise dos arquivos gerados (decifrados/)
 # -----------------------------
-# Função que varre os arquivos em decifrados/ e imprime um resumo por arquivo:
-# "<arquivo> | Qtsd encontradas: XX.XX% | percentual do texto traduzido: YY.YY%"
+# Função que varre os arquivos em decifrados/ e imprime um resumo por arquivo.
 fd.analisar_decifrados_completo()
 
 # -----------------------------
