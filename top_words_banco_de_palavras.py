@@ -51,27 +51,24 @@ top_words_banco_de_palavras = {
 'SO': 49,
 'NO': 50,
 
-#Texto 1 - Palavras necessárias para completar texto 1
-#'DAY': 1001,
-#'ARMS': 1002,
-#'BLEAK': 1003,
-#'CEASE': 1004,
-#'SPECIES': 1005,
-#'EXPLORATION': 1006,
-#'ENLIGHTENMENT': 1007,
+# #Texto 1 - Palavras necessárias para completar texto 1
+# 'DAY': 1001,
+# 'ARMS': 1002,
+# 'BLEAK': 1003,
+# 'CEASE': 1004,
+# 'SPECIES': 1005,
+# 'EXPLORATION': 1006,
+# 'ENLIGHTENMENT': 1007,
 
-#Texto 2 - Palavras necessárias para completar texto 2
-#'JOY': 2001,
-#'KINDLY': 2002,
-#'EXPLORER': 2003,
-#'FREQUENT': 2004,
-#'CIVILIZATION': 2005,
-#'RESPONSIBILITY': 2006,
-#'DISTINGUISHABLE': 2007,
-
-
+# #Texto 2 - Palavras necessárias para completar texto 2
+# 'JOY': 2001,
+# 'KINDLY': 2002,
+# 'EXPLORER': 2003,
+# 'FREQUENT': 2004,
+# 'CIVILIZATION': 2005,
+# 'RESPONSIBILITY': 2006,
+# 'DISTINGUISHABLE': 2007,
 
 
 
-#'THATH': 2003,
 }

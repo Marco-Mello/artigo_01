@@ -1,0 +1,1230 @@
+[
+  {
+    "event": "map_saved",
+    "info": {
+      "map_path": "mapeamentos\\A_final_map.py",
+      "map": {
+        "T": "A"
+      },
+      "size": 1
+    }
+  },
+  {
+    "event": "dec_saved",
+    "info": {
+      "dec_path": "decifrados\\A_decifrado.py",
+      "map": {
+        "T": "A"
+      },
+      "prefix": "A_"
+    }
+  },
+  {
+    "event": "map_saved",
+    "info": {
+      "map_path": "mapeamentos\\I_final_map.py",
+      "map": {
+        "T": "I"
+      },
+      "size": 1
+    }
+  },
+  {
+    "event": "dec_saved",
+    "info": {
+      "dec_path": "decifrados\\I_decifrado.py",
+      "map": {
+        "T": "I"
+      },
+      "prefix": "I_"
+    }
+  },
+  {
+    "event": "map_saved",
+    "info": {
+      "map_path": "mapeamentos\\THE_step1_final_map.py",
+      "map": {
+        "V": "T",
+        "C": "H",
+        "O": "E"
+      },
+      "size": 3
+    }
+  },
+  {
+    "event": "subloop",
+    "info": {
+      "prefix": "",
+      "token": "THE_step1",
+      "map_size": 3,
+      "pct_trad": 30.319148936170215,
+      "pct_palavras": 13.750000000000002
+    }
+  },
+  {
+    "event": "map_saved",
+    "info": {
+      "map_path": "mapeamentos\\THE_step1_final_map.py",
+      "map": {
+        "V": "T",
+        "C": "H",
+        "O": "E",
+        "T": "A"
+      },
+      "size": 4
+    }
+  },
+  {
+    "event": "dec_saved",
+    "info": {
+      "dec_path": "decifrados\\THE_step1_decifrado.py",
+      "map_size": 4,
+      "pct_trad": 37.5,
+      "threshold": 75.0
+    }
+  },
+  {
+    "event": "map_saved",
+    "info": {
+      "map_path": "mapeamentos\\THE_step1_final_map.py",
+      "map": {
+        "V": "T",
+        "C": "H",
+        "O": "E",
+        "T": "A",
+        "B": "V",
+        "I": "R"
+      },
+      "size": 6
+    }
+  },
+  {
+    "event": "dec_saved",
+    "info": {
+      "dec_path": "decifrados\\THE_step1_decifrado.py",
+      "map_size": 6,
+      "pct_trad": 44.680851063829785,
+      "threshold": 66.0
+    }
+  },
+  {
+    "event": "map_saved",
+    "info": {
+      "map_path": "mapeamentos\\THE_step1_final_map.py",
+      "map": {
+        "V": "T",
+        "C": "H",
+        "O": "E",
+        "T": "A",
+        "B": "V",
+        "I": "R",
+        "N": "I",
+        "M": "B",
+        "Z": "N",
+        "H": "W",
+        "W": "O"
+      },
+      "size": 11
+    }
+  },
+  {
+    "event": "dec_saved",
+    "info": {
+      "dec_path": "decifrados\\THE_step1_decifrado.py",
+      "map_size": 11,
+      "pct_trad": 75.2659574468085,
+      "threshold": 50.0
+    }
+  },
+  {
+    "event": "map_saved",
+    "info": {
+      "map_path": "mapeamentos\\THE_step1_final_map.py",
+      "map": {
+        "V": "T",
+        "C": "H",
+        "O": "E",
+        "T": "A",
+        "B": "V",
+        "I": "R",
+        "N": "I",
+        "M": "B",
+        "Z": "N",
+        "H": "W",
+        "W": "O",
+        "S": "C",
+        "A": "D",
+        "U": "U",
+        "K": "L"
+      },
+      "size": 15
+    }
+  },
+  {
+    "event": "dec_saved",
+    "info": {
+      "dec_path": "decifrados\\THE_step1_decifrado.py",
+      "map_size": 15,
+      "pct_trad": 88.56382978723404,
+      "threshold": 33.0
+    }
+  },
+  {
+    "event": "map_saved",
+    "info": {
+      "map_path": "mapeamentos\\AND_step1_final_map.py",
+      "map": {
+        "V": "A",
+        "C": "N",
+        "O": "D"
+      },
+      "size": 3
+    }
+  },
+  {
+    "event": "subloop",
+    "info": {
+      "prefix": "",
+      "token": "AND_step1",
+      "map_size": 3,
+      "pct_trad": 30.319148936170215,
+      "pct_palavras": 10.0
+    }
+  },
+  {
+    "event": "map_saved",
+    "info": {
+      "map_path": "mapeamentos\\AND_step1_final_map.py",
+      "map": {
+        "V": "A",
+        "C": "N",
+        "O": "D",
+        "J": "W",
+        "I": "O",
+        "W": "U",
+        "Z": "L"
+      },
+      "size": 7
+    }
+  },
+  {
+    "event": "dec_saved",
+    "info": {
+      "dec_path": "decifrados\\AND_step1_decifrado.py",
+      "map_size": 7,
+      "pct_trad": 54.78723404255319,
+      "threshold": 10.0
+    }
+  },
+  {
+    "event": "map_saved",
+    "info": {
+      "map_path": "mapeamentos\\FOR_step1_final_map.py",
+      "map": {
+        "V": "F",
+        "C": "O",
+        "O": "R"
+      },
+      "size": 3
+    }
+  },
+  {
+    "event": "subloop",
+    "info": {
+      "prefix": "",
+      "token": "FOR_step1",
+      "map_size": 3,
+      "pct_trad": 30.319148936170215,
+      "pct_palavras": 10.0
+    }
+  },
+  {
+    "event": "map_saved",
+    "info": {
+      "map_path": "mapeamentos\\FOR_step1_final_map.py",
+      "map": {
+        "V": "F",
+        "C": "O",
+        "O": "R",
+        "T": "H",
+        "I": "E"
+      },
+      "size": 5
+    }
+  },
+  {
+    "event": "dec_saved",
+    "info": {
+      "dec_path": "decifrados\\FOR_step1_decifrado.py",
+      "map_size": 5,
+      "pct_trad": 43.351063829787236,
+      "threshold": 33.0
+    }
+  },
+  {
+    "event": "map_saved",
+    "info": {
+      "map_path": "mapeamentos\\FOR_step1_final_map.py",
+      "map": {
+        "V": "F",
+        "C": "O",
+        "O": "R",
+        "T": "H",
+        "I": "E",
+        "Z": "A",
+        "A": "S"
+      },
+      "size": 7
+    }
+  },
+  {
+    "event": "dec_saved",
+    "info": {
+      "dec_path": "decifrados\\FOR_step1_decifrado.py",
+      "map_size": 7,
+      "pct_trad": 53.98936170212766,
+      "threshold": 25.0
+    }
+  },
+  {
+    "event": "map_saved",
+    "info": {
+      "map_path": "mapeamentos\\WAS_step1_final_map.py",
+      "map": {
+        "V": "W",
+        "C": "A",
+        "O": "S"
+      },
+      "size": 3
+    }
+  },
+  {
+    "event": "subloop",
+    "info": {
+      "prefix": "",
+      "token": "WAS_step1",
+      "map_size": 3,
+      "pct_trad": 30.319148936170215,
+      "pct_palavras": 10.0
+    }
+  },
+  {
+    "event": "map_saved",
+    "info": {
+      "map_path": "mapeamentos\\WAS_step1_final_map.py",
+      "map": {
+        "V": "W",
+        "C": "A",
+        "O": "S",
+        "W": "E"
+      },
+      "size": 4
+    }
+  },
+  {
+    "event": "dec_saved",
+    "info": {
+      "dec_path": "decifrados\\WAS_step1_decifrado.py",
+      "map_size": 4,
+      "pct_trad": 37.765957446808514,
+      "threshold": 50.0
+    }
+  },
+  {
+    "event": "map_saved",
+    "info": {
+      "map_path": "mapeamentos\\WAS_step1_final_map.py",
+      "map": {
+        "V": "W",
+        "C": "A",
+        "O": "S",
+        "W": "E",
+        "K": "H",
+        "H": "R"
+      },
+      "size": 6
+    }
+  },
+  {
+    "event": "dec_saved",
+    "info": {
+      "dec_path": "decifrados\\WAS_step1_decifrado.py",
+      "map_size": 6,
+      "pct_trad": 43.88297872340425,
+      "threshold": 33.0
+    }
+  },
+  {
+    "event": "map_saved",
+    "info": {
+      "map_path": "mapeamentos\\NOT_step1_final_map.py",
+      "map": {
+        "V": "N",
+        "C": "O",
+        "O": "T"
+      },
+      "size": 3
+    }
+  },
+  {
+    "event": "subloop",
+    "info": {
+      "prefix": "",
+      "token": "NOT_step1",
+      "map_size": 3,
+      "pct_trad": 30.319148936170215,
+      "pct_palavras": 10.0
+    }
+  },
+  {
+    "event": "map_saved",
+    "info": {
+      "map_path": "mapeamentos\\NOT_step1_final_map.py",
+      "map": {
+        "V": "N",
+        "C": "O",
+        "O": "T",
+        "H": "A"
+      },
+      "size": 4
+    }
+  },
+  {
+    "event": "dec_saved",
+    "info": {
+      "dec_path": "decifrados\\NOT_step1_decifrado.py",
+      "map_size": 4,
+      "pct_trad": 33.244680851063826,
+      "threshold": 50.0
+    }
+  },
+  {
+    "event": "map_saved",
+    "info": {
+      "map_path": "mapeamentos\\NOT_step1_final_map.py",
+      "map": {
+        "V": "N",
+        "C": "O",
+        "O": "T",
+        "H": "A",
+        "X": "I",
+        "T": "B",
+        "I": "U"
+      },
+      "size": 7
+    }
+  },
+  {
+    "event": "dec_saved",
+    "info": {
+      "dec_path": "decifrados\\NOT_step1_decifrado.py",
+      "map_size": 7,
+      "pct_trad": 48.138297872340424,
+      "threshold": 33.0
+    }
+  },
+  {
+    "event": "map_saved",
+    "info": {
+      "map_path": "mapeamentos\\ARE_step1_final_map.py",
+      "map": {
+        "V": "A",
+        "C": "R",
+        "O": "E"
+      },
+      "size": 3
+    }
+  },
+  {
+    "event": "subloop",
+    "info": {
+      "prefix": "",
+      "token": "ARE_step1",
+      "map_size": 3,
+      "pct_trad": 30.319148936170215,
+      "pct_palavras": 13.750000000000002
+    }
+  },
+  {
+    "event": "map_saved",
+    "info": {
+      "map_path": "mapeamentos\\ARE_step1_final_map.py",
+      "map": {
+        "V": "A",
+        "C": "R",
+        "O": "E",
+        "M": "B",
+        "Z": "N",
+        "H": "W"
+      },
+      "size": 6
+    }
+  },
+  {
+    "event": "dec_saved",
+    "info": {
+      "dec_path": "decifrados\\ARE_step1_decifrado.py",
+      "map_size": 6,
+      "pct_trad": 46.54255319148936,
+      "threshold": 50.0
+    }
+  },
+  {
+    "event": "map_saved",
+    "info": {
+      "map_path": "mapeamentos\\ARE_step1_final_map.py",
+      "map": {
+        "V": "A",
+        "C": "R",
+        "O": "E",
+        "M": "B",
+        "Z": "N",
+        "H": "W",
+        "W": "O",
+        "X": "H",
+        "I": "T"
+      },
+      "size": 9
+    }
+  },
+  {
+    "event": "dec_saved",
+    "info": {
+      "dec_path": "decifrados\\ARE_step1_decifrado.py",
+      "map_size": 9,
+      "pct_trad": 61.702127659574465,
+      "threshold": 33.0
+    }
+  },
+  {
+    "event": "map_saved",
+    "info": {
+      "map_path": "mapeamentos\\ARE_step1_final_map.py",
+      "map": {
+        "V": "A",
+        "C": "R",
+        "O": "E",
+        "M": "B",
+        "Z": "N",
+        "H": "W",
+        "W": "O",
+        "X": "H",
+        "I": "T",
+        "U": "U",
+        "K": "L",
+        "A": "D"
+      },
+      "size": 12
+    }
+  },
+  {
+    "event": "dec_saved",
+    "info": {
+      "dec_path": "decifrados\\ARE_step1_decifrado.py",
+      "map_size": 12,
+      "pct_trad": 70.47872340425532,
+      "threshold": 25.0
+    }
+  },
+  {
+    "event": "map_saved",
+    "info": {
+      "map_path": "mapeamentos\\HIS_step1_final_map.py",
+      "map": {
+        "V": "H",
+        "C": "I",
+        "O": "S"
+      },
+      "size": 3
+    }
+  },
+  {
+    "event": "subloop",
+    "info": {
+      "prefix": "",
+      "token": "HIS_step1",
+      "map_size": 3,
+      "pct_trad": 30.319148936170215,
+      "pct_palavras": 10.0
+    }
+  },
+  {
+    "event": "map_saved",
+    "info": {
+      "map_path": "mapeamentos\\HIS_step1_final_map.py",
+      "map": {
+        "V": "H",
+        "C": "I",
+        "O": "S",
+        "H": "A",
+        "W": "E"
+      },
+      "size": 5
+    }
+  },
+  {
+    "event": "dec_saved",
+    "info": {
+      "dec_path": "decifrados\\HIS_step1_decifrado.py",
+      "map_size": 5,
+      "pct_trad": 40.691489361702125,
+      "threshold": 50.0
+    }
+  },
+  {
+    "event": "map_saved",
+    "info": {
+      "map_path": "mapeamentos\\BUT_step1_final_map.py",
+      "map": {
+        "V": "B",
+        "C": "U",
+        "O": "T"
+      },
+      "size": 3
+    }
+  },
+  {
+    "event": "subloop",
+    "info": {
+      "prefix": "",
+      "token": "BUT_step1",
+      "map_size": 3,
+      "pct_trad": 30.319148936170215,
+      "pct_palavras": 10.0
+    }
+  },
+  {
+    "event": "map_saved",
+    "info": {
+      "map_path": "mapeamentos\\BUT_step1_final_map.py",
+      "map": {
+        "V": "B",
+        "C": "U",
+        "O": "T",
+        "H": "A",
+        "W": "Y"
+      },
+      "size": 5
+    }
+  },
+  {
+    "event": "dec_saved",
+    "info": {
+      "dec_path": "decifrados\\BUT_step1_decifrado.py",
+      "map_size": 5,
+      "pct_trad": 40.691489361702125,
+      "threshold": 50.0
+    }
+  },
+  {
+    "event": "map_saved",
+    "info": {
+      "map_path": "mapeamentos\\BUT_step1_final_map.py",
+      "map": {
+        "V": "B",
+        "C": "U",
+        "O": "T",
+        "H": "A",
+        "W": "Y",
+        "X": "I"
+      },
+      "size": 6
+    }
+  },
+  {
+    "event": "dec_saved",
+    "info": {
+      "dec_path": "decifrados\\BUT_step1_decifrado.py",
+      "map_size": 6,
+      "pct_trad": 42.5531914893617,
+      "threshold": 33.0
+    }
+  },
+  {
+    "event": "map_saved",
+    "info": {
+      "map_path": "mapeamentos\\HAD_step1_final_map.py",
+      "map": {
+        "V": "H",
+        "C": "A",
+        "O": "D"
+      },
+      "size": 3
+    }
+  },
+  {
+    "event": "subloop",
+    "info": {
+      "prefix": "",
+      "token": "HAD_step1",
+      "map_size": 3,
+      "pct_trad": 30.319148936170215,
+      "pct_palavras": 10.0
+    }
+  },
+  {
+    "event": "map_saved",
+    "info": {
+      "map_path": "mapeamentos\\HAD_step1_final_map.py",
+      "map": {
+        "V": "H",
+        "C": "A",
+        "O": "D",
+        "W": "E"
+      },
+      "size": 4
+    }
+  },
+  {
+    "event": "dec_saved",
+    "info": {
+      "dec_path": "decifrados\\HAD_step1_decifrado.py",
+      "map_size": 4,
+      "pct_trad": 37.765957446808514,
+      "threshold": 50.0
+    }
+  },
+  {
+    "event": "map_saved",
+    "info": {
+      "map_path": "mapeamentos\\HAD_step1_final_map.py",
+      "map": {
+        "V": "H",
+        "C": "A",
+        "O": "D",
+        "W": "E",
+        "K": "W",
+        "T": "I",
+        "M": "T"
+      },
+      "size": 7
+    }
+  },
+  {
+    "event": "dec_saved",
+    "info": {
+      "dec_path": "decifrados\\HAD_step1_decifrado.py",
+      "map_size": 7,
+      "pct_trad": 53.191489361702125,
+      "threshold": 25.0
+    }
+  },
+  {
+    "event": "map_saved",
+    "info": {
+      "map_path": "mapeamentos\\YOU_step1_final_map.py",
+      "map": {
+        "V": "Y",
+        "C": "O",
+        "O": "U"
+      },
+      "size": 3
+    }
+  },
+  {
+    "event": "subloop",
+    "info": {
+      "prefix": "",
+      "token": "YOU_step1",
+      "map_size": 3,
+      "pct_trad": 30.319148936170215,
+      "pct_palavras": 10.0
+    }
+  },
+  {
+    "event": "map_saved",
+    "info": {
+      "map_path": "mapeamentos\\YOU_step1_final_map.py",
+      "map": {
+        "V": "Y",
+        "C": "O",
+        "O": "U",
+        "Z": "B",
+        "H": "T"
+      },
+      "size": 5
+    }
+  },
+  {
+    "event": "dec_saved",
+    "info": {
+      "dec_path": "decifrados\\YOU_step1_decifrado.py",
+      "map_size": 5,
+      "pct_trad": 41.48936170212766,
+      "threshold": 33.0
+    }
+  },
+  {
+    "event": "map_saved",
+    "info": {
+      "map_path": "mapeamentos\\YOU_step1_final_map.py",
+      "map": {
+        "V": "Y",
+        "C": "O",
+        "O": "U",
+        "Z": "B",
+        "H": "T",
+        "W": "H",
+        "I": "E",
+        "K": "R",
+        "A": "E"
+      },
+      "size": 9
+    }
+  },
+  {
+    "event": "dec_saved",
+    "info": {
+      "dec_path": "decifrados\\YOU_step1_decifrado.py",
+      "map_size": 9,
+      "pct_trad": 60.37234042553191,
+      "threshold": 10.0
+    }
+  },
+  {
+    "event": "map_saved",
+    "info": {
+      "map_path": "mapeamentos\\ONE_step1_final_map.py",
+      "map": {
+        "V": "O",
+        "C": "N",
+        "O": "E"
+      },
+      "size": 3
+    }
+  },
+  {
+    "event": "subloop",
+    "info": {
+      "prefix": "",
+      "token": "ONE_step1",
+      "map_size": 3,
+      "pct_trad": 30.319148936170215,
+      "pct_palavras": 13.750000000000002
+    }
+  },
+  {
+    "event": "map_saved",
+    "info": {
+      "map_path": "mapeamentos\\ONE_step1_final_map.py",
+      "map": {
+        "V": "O",
+        "C": "N",
+        "O": "E",
+        "H": "W",
+        "W": "R"
+      },
+      "size": 5
+    }
+  },
+  {
+    "event": "dec_saved",
+    "info": {
+      "dec_path": "decifrados\\ONE_step1_decifrado.py",
+      "map_size": 5,
+      "pct_trad": 40.691489361702125,
+      "threshold": 50.0
+    }
+  },
+  {
+    "event": "map_saved",
+    "info": {
+      "map_path": "mapeamentos\\ONE_step1_final_map.py",
+      "map": {
+        "V": "O",
+        "C": "N",
+        "O": "E",
+        "H": "W",
+        "W": "R",
+        "X": "H"
+      },
+      "size": 6
+    }
+  },
+  {
+    "event": "dec_saved",
+    "info": {
+      "dec_path": "decifrados\\ONE_step1_decifrado.py",
+      "map_size": 6,
+      "pct_trad": 42.5531914893617,
+      "threshold": 33.0
+    }
+  },
+  {
+    "event": "map_saved",
+    "info": {
+      "map_path": "mapeamentos\\ALL_step1_final_map.py",
+      "map": {
+        "V": "A",
+        "C": "L",
+        "O": "L"
+      },
+      "size": 3
+    }
+  },
+  {
+    "event": "subloop",
+    "info": {
+      "prefix": "",
+      "token": "ALL_step1",
+      "map_size": 3,
+      "pct_trad": 30.319148936170215,
+      "pct_palavras": 10.0
+    }
+  },
+  {
+    "event": "map_saved",
+    "info": {
+      "map_path": "mapeamentos\\ALL_step1_final_map.py",
+      "map": {
+        "V": "A",
+        "C": "L",
+        "O": "L",
+        "W": "N"
+      },
+      "size": 4
+    }
+  },
+  {
+    "event": "dec_saved",
+    "info": {
+      "dec_path": "decifrados\\ALL_step1_decifrado.py",
+      "map_size": 4,
+      "pct_trad": 37.765957446808514,
+      "threshold": 50.0
+    }
+  },
+  {
+    "event": "map_saved",
+    "info": {
+      "map_path": "mapeamentos\\ALL_step1_final_map.py",
+      "map": {
+        "V": "A",
+        "C": "L",
+        "O": "L",
+        "W": "N",
+        "G": "O"
+      },
+      "size": 5
+    }
+  },
+  {
+    "event": "dec_saved",
+    "info": {
+      "dec_path": "decifrados\\ALL_step1_decifrado.py",
+      "map_size": 5,
+      "pct_trad": 39.09574468085106,
+      "threshold": 33.0
+    }
+  },
+  {
+    "event": "map_saved",
+    "info": {
+      "map_path": "mapeamentos\\CAN_step1_final_map.py",
+      "map": {
+        "V": "C",
+        "C": "A",
+        "O": "N"
+      },
+      "size": 3
+    }
+  },
+  {
+    "event": "subloop",
+    "info": {
+      "prefix": "",
+      "token": "CAN_step1",
+      "map_size": 3,
+      "pct_trad": 30.319148936170215,
+      "pct_palavras": 10.0
+    }
+  },
+  {
+    "event": "map_saved",
+    "info": {
+      "map_path": "mapeamentos\\CAN_step1_final_map.py",
+      "map": {
+        "V": "C",
+        "C": "A",
+        "O": "N",
+        "Z": "O",
+        "H": "E"
+      },
+      "size": 5
+    }
+  },
+  {
+    "event": "dec_saved",
+    "info": {
+      "dec_path": "decifrados\\CAN_step1_decifrado.py",
+      "map_size": 5,
+      "pct_trad": 41.48936170212766,
+      "threshold": 33.0
+    }
+  },
+  {
+    "event": "map_saved",
+    "info": {
+      "map_path": "mapeamentos\\CAN_step1_final_map.py",
+      "map": {
+        "V": "C",
+        "C": "A",
+        "O": "N",
+        "Z": "O",
+        "H": "E",
+        "T": "Y",
+        "A": "U"
+      },
+      "size": 7
+    }
+  },
+  {
+    "event": "dec_saved",
+    "info": {
+      "dec_path": "decifrados\\CAN_step1_decifrado.py",
+      "map_size": 7,
+      "pct_trad": 51.06382978723404,
+      "threshold": 25.0
+    }
+  },
+  {
+    "event": "map_saved",
+    "info": {
+      "map_path": "mapeamentos\\HER_step1_final_map.py",
+      "map": {
+        "V": "H",
+        "C": "E",
+        "O": "R"
+      },
+      "size": 3
+    }
+  },
+  {
+    "event": "subloop",
+    "info": {
+      "prefix": "",
+      "token": "HER_step1",
+      "map_size": 3,
+      "pct_trad": 30.319148936170215,
+      "pct_palavras": 10.0
+    }
+  },
+  {
+    "event": "map_saved",
+    "info": {
+      "map_path": "mapeamentos\\HER_step1_final_map.py",
+      "map": {
+        "V": "H",
+        "C": "E",
+        "O": "R",
+        "H": "O"
+      },
+      "size": 4
+    }
+  },
+  {
+    "event": "dec_saved",
+    "info": {
+      "dec_path": "decifrados\\HER_step1_decifrado.py",
+      "map_size": 4,
+      "pct_trad": 33.244680851063826,
+      "threshold": 50.0
+    }
+  },
+  {
+    "event": "map_saved",
+    "info": {
+      "map_path": "mapeamentos\\HER_step1_final_map.py",
+      "map": {
+        "V": "H",
+        "C": "E",
+        "O": "R",
+        "H": "O",
+        "K": "W",
+        "T": "I",
+        "M": "T"
+      },
+      "size": 7
+    }
+  },
+  {
+    "event": "dec_saved",
+    "info": {
+      "dec_path": "decifrados\\HER_step1_decifrado.py",
+      "map_size": 7,
+      "pct_trad": 48.67021276595745,
+      "threshold": 25.0
+    }
+  },
+  {
+    "event": "map_saved",
+    "info": {
+      "map_path": "mapeamentos\\HER_step1_final_map.py",
+      "map": {
+        "V": "H",
+        "C": "E",
+        "O": "R",
+        "H": "O",
+        "K": "W",
+        "T": "I",
+        "M": "T",
+        "N": "A"
+      },
+      "size": 8
+    }
+  },
+  {
+    "event": "dec_saved",
+    "info": {
+      "dec_path": "decifrados\\HER_step1_decifrado.py",
+      "map_size": 8,
+      "pct_trad": 55.58510638297872,
+      "threshold": 10.0
+    }
+  },
+  {
+    "event": "map_saved",
+    "info": {
+      "map_path": "mapeamentos\\HAS_step1_final_map.py",
+      "map": {
+        "V": "H",
+        "C": "A",
+        "O": "S"
+      },
+      "size": 3
+    }
+  },
+  {
+    "event": "subloop",
+    "info": {
+      "prefix": "",
+      "token": "HAS_step1",
+      "map_size": 3,
+      "pct_trad": 30.319148936170215,
+      "pct_palavras": 10.0
+    }
+  },
+  {
+    "event": "map_saved",
+    "info": {
+      "map_path": "mapeamentos\\HAS_step1_final_map.py",
+      "map": {
+        "V": "H",
+        "C": "A",
+        "O": "S",
+        "W": "E"
+      },
+      "size": 4
+    }
+  },
+  {
+    "event": "dec_saved",
+    "info": {
+      "dec_path": "decifrados\\HAS_step1_decifrado.py",
+      "map_size": 4,
+      "pct_trad": 37.765957446808514,
+      "threshold": 50.0
+    }
+  },
+  {
+    "event": "map_saved",
+    "info": {
+      "map_path": "mapeamentos\\HAS_step1_final_map.py",
+      "map": {
+        "V": "H",
+        "C": "A",
+        "O": "S",
+        "W": "E",
+        "K": "W",
+        "T": "I",
+        "M": "T"
+      },
+      "size": 7
+    }
+  },
+  {
+    "event": "dec_saved",
+    "info": {
+      "dec_path": "decifrados\\HAS_step1_decifrado.py",
+      "map_size": 7,
+      "pct_trad": 53.191489361702125,
+      "threshold": 25.0
+    }
+  },
+  {
+    "event": "map_saved",
+    "info": {
+      "map_path": "mapeamentos\\WHO_step1_final_map.py",
+      "map": {
+        "V": "W",
+        "C": "H",
+        "O": "O"
+      },
+      "size": 3
+    }
+  },
+  {
+    "event": "subloop",
+    "info": {
+      "prefix": "",
+      "token": "WHO_step1",
+      "map_size": 3,
+      "pct_trad": 30.319148936170215,
+      "pct_palavras": 10.0
+    }
+  },
+  {
+    "event": "map_saved",
+    "info": {
+      "map_path": "mapeamentos\\WHO_step1_final_map.py",
+      "map": {
+        "V": "W",
+        "C": "H",
+        "O": "O",
+        "H": "N",
+        "W": "E"
+      },
+      "size": 5
+    }
+  },
+  {
+    "event": "dec_saved",
+    "info": {
+      "dec_path": "decifrados\\WHO_step1_decifrado.py",
+      "map_size": 5,
+      "pct_trad": 40.691489361702125,
+      "threshold": 50.0
+    }
+  },
+  {
+    "event": "map_saved",
+    "info": {
+      "map_path": "mapeamentos\\WHO_step1_final_map.py",
+      "map": {
+        "V": "W",
+        "C": "H",
+        "O": "O",
+        "H": "N",
+        "W": "E",
+        "X": "S"
+      },
+      "size": 6
+    }
+  },
+  {
+    "event": "dec_saved",
+    "info": {
+      "dec_path": "decifrados\\WHO_step1_decifrado.py",
+      "map_size": 6,
+      "pct_trad": 42.5531914893617,
+      "threshold": 33.0
+    }
+  },
+  {
+    "event": "final",
+    "info": {
+      "out_path": "encoded_decifrado.txt",
+      "melhor_path": "decifrados\\THE_step1_decifrado.py"
+    }
+  }
+]

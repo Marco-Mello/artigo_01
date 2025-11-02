@@ -915,7 +915,6 @@ def aplicar_3_letras_sequencial_v2(fonte: str,
         total_letras = len(letras)
         minusculas = sum(1 for ch in letras if ch.islower()) if total_letras else 0
         pct_traducao = (minusculas / total_letras * 100.0) if total_letras else 0.0
-        print(f"{dec_path.name:<35} | Qtd. encontradas: {pct_palavras:6.2f}% | Percentual do texto traduzido: {pct_traducao:6.2f}%")
 
     # prefix clean (sem underscore)
     prefix_clean = prefix_base.rstrip("_")
@@ -1130,7 +1129,6 @@ def aplicar_3_letras_sem_subloop(fonte: str,
             total_letras = len(letras)
             minusculas = sum(1 for ch in letras if ch.islower()) if total_letras else 0
             pct_traducao = (minusculas / total_letras * 100.0) if total_letras else 0.0
-            print(f"{dec_path.name:<35} | Qtd. encontradas: {pct_palavras:6.2f}% | Percentual do texto traduzido: {pct_traducao:6.2f}%")
         except Exception:
             pass
 
@@ -1200,6 +1198,15 @@ def executar_pipeline_decifrado(fonte: str,
 def analisar_decifrados_completo(top_words_path: str = "top_words_banco_de_palavras.py",
                                  decifrados_dir: str = "decifrados",
                                  print_report: bool = True):
+    """
+    Agora imprime apenas os arquivos agrupados por etapa (1 letra, 2 letras, 3 letras)
+    e depois mostra o arquivo escolhido (melhor). Não imprime a lista completa antes.
+
+    Esta versão detecta a etapa a partir do padrão do nome do arquivo gerado:
+      - Etapa 1: arquivos tipo "A_decifrado.py", "I_decifrado.py" (primeiro token 1 letra)
+      - Etapa 2: arquivos tipo "A_AT_decifrado.py", "I_IS_decifrado.py" (contém token de 2 letras)
+      - Etapa 3: arquivos tipo "THE_decifrado.py", "3letters_decifrado.py" (token de 3 letras ou fallback)
+    """
     GREEN = "\033[92m"
     RED = "\033[91m"
     YELLOW = "\033[93m"
@@ -1209,6 +1216,7 @@ def analisar_decifrados_completo(top_words_path: str = "top_words_banco_de_palav
     if not p_dec.exists() or not p_dec.is_dir():
         raise FileNotFoundError(f"Pasta de decifrados não encontrada: {decifrados_dir}")
 
+    # carrega top_words (para métricas)
     top_words = _load_top_words(top_words_path)
     top_words_set = set(top_words.keys())
 
@@ -1241,25 +1249,107 @@ def analisar_decifrados_completo(top_words_path: str = "top_words_banco_de_palav
         print("Nenhum arquivo encontrado em 'decifrados/'.")
         return {}
 
+    # Determina o melhor (mesma regra que antes)
     melhor = max(
         resultados.values(),
         key=lambda x: (x["pct_traducao"], x["pct_palavras"])
     )
 
+    # --- Funções utilitárias para detectar etapa via nome de arquivo ---
+    def _normalize_name(nome: str) -> str:
+        """Remove prefixos/sufixos previsíveis e normaliza para A_AT, THE, 3letters, etc."""
+        s = nome
+        s = re.sub(r"^3_", "", s, flags=re.IGNORECASE)             # remove leading 3_ se existir
+        s = re.sub(r"_step\d+", "", s, flags=re.IGNORECASE)       # remove _stepN
+        s = re.sub(r"_decifrado\.py$", "", s, flags=re.IGNORECASE)
+        s = re.sub(r"_final_map\.py$", "", s, flags=re.IGNORECASE)
+        return s
+
+    def _letters_tokens_from_name(nome_normalizado: str) -> List[str]:
+        """Retorna lista de tokens de letras (somente A-Z) encontrados no nome."""
+        parts = re.split(r"[_\-\s]+", nome_normalizado)
+        tokens = []
+        for p in parts:
+            # manter apenas blocos que contenham apenas letras A-Z
+            m = re.fullmatch(r"[A-Za-z]+", p)
+            if m:
+                tokens.append(p.upper())
+        return tokens
+
+    def _determine_stage_by_name(nome_arquivo: str) -> int:
+        """
+        Retorna 1, 2 ou 3 baseado em heurísticas:
+         - se houver um token de 2 letras e houver também um token de 1 letra -> etapa 2 (ex: A_AT)
+         - se houver token de comprimento 1 e nenhum token de 2 -> etapa 1 (ex: A)
+         - se houver token de comprimento 3 (THE, AND, etc) -> etapa 3
+         - fallback: se soma total de letras for 1 -> 1, 2 -> 2, >=3 -> 3
+        """
+        norm = _normalize_name(nome_arquivo)
+        tokens = _letters_tokens_from_name(norm)
+        if not tokens:
+            # fallback simples baseado no nome sem letras
+            total_letters = len(re.findall(r"[A-Za-z]", nome_arquivo))
+            if total_letters <= 1:
+                return 1
+            if total_letters == 2:
+                return 2
+            return 3
+
+        # Prefira detectar padrão "X_YY" (1-letter then 2-letter) => etapa 2
+        has_len1 = any(len(t) == 1 for t in tokens)
+        has_len2 = any(len(t) == 2 for t in tokens)
+        has_len3 = any(len(t) == 3 for t in tokens)
+
+        if has_len1 and has_len2:
+            return 2
+        if has_len1 and not has_len2 and not has_len3:
+            return 1
+        if has_len3 and not has_len1:
+            return 3
+
+        # Caso ambíguo: usar fallback pela maior ocorrência de tamanho
+        lengths = [len(t) for t in tokens]
+        most_common_len = max(set(lengths), key=lengths.count)
+        if most_common_len == 1:
+            return 1
+        if most_common_len == 2:
+            return 2
+        return 3
+
+    # --- Agrupar por etapa 1,2,3 ---
+    groups = {1: [], 2: [], 3: []}
+    others = []
+
+    for path_str, info in resultados.items():
+        nome = info["nome"]
+        etapa = _determine_stage_by_name(nome)
+        if etapa in groups:
+            groups[etapa].append((nome, info))
+        else:
+            others.append((nome, info))
+
+    # Impressão agrupada — só etapas 1,2,3 (se existirem)
     if print_report:
-        for r in resultados.values():
-            nome_limpo = re.sub(r"^3_", "", r["nome"])
-            nome_limpo = re.sub(r"_step\d+", "", nome_limpo)
+        if groups[1]:
+            print("\n===== Etapa 1 (palavras de 1 letra) =====")
+            for nome, info in groups[1]:
+                print(f"{nome:<35} | Qtd. encontradas: {info['pct_palavras']:6.2f}% | Percentual do texto traduzido: {info['pct_traducao']:6.2f}%")
+        if groups[2]:
+            print("\n===== Etapa 2 (palavras de 2 letras) =====")
+            for nome, info in groups[2]:
+                print(f"{nome:<35} | Qtd. encontradas: {info['pct_palavras']:6.2f}% | Percentual do texto traduzido: {info['pct_traducao']:6.2f}%")
+        if groups[3]:
+            print("\n===== Etapa 3 (palavras de 3 letras) =====")
+            for nome, info in groups[3]:
+                print(f"{nome:<35} | Qtd. encontradas: {info['pct_palavras']:6.2f}% | Percentual do texto traduzido: {info['pct_traducao']:6.2f}%")
 
-            color = GREEN if r is melhor else RED
-            print(f"{color}{nome_limpo:<35} | Qtd. encontradas: {r['pct_palavras']:6.2f}% "
-                  f"| Percentual do texto traduzido: {r['pct_traducao']:6.2f}%{RESET}")
-
+        # Por fim, imprime o escolhido (melhor)
         nome_melhor_limpo = re.sub(r"^3_", "", melhor["nome"])
         nome_melhor_limpo = re.sub(r"_step\d+", "", nome_melhor_limpo)
-        print(f"\n{YELLOW}→ Arquivo com maior progresso: {nome_melhor_limpo}{RESET}")
+        print(f"\n→ Arquivo com maior progresso: {YELLOW}{nome_melhor_limpo}{RESET}")
 
     return resultados
+
 
 def imprimir_melhor_texto(decifrados_dir: str = "decifrados",
                           top_words_path: str = "top_words_banco_de_palavras.py",
@@ -1414,7 +1504,7 @@ def executar_fallback_3_letras(fonte: str,
 
     Retorna o dicionário resultado retornado pela função aplicar_3_letras_sequencial_v2.
     """
-    print("🔁 Iniciando fallback automático de 3 letras...\n")
+    
 
     tres_palavras = [
         "THE", "AND", "FOR", "WAS", "NOT", "ARE", "HIS", "BUT",
@@ -1435,12 +1525,12 @@ def executar_fallback_3_letras(fonte: str,
         applied = resultado_fallback.get("applied", {})
         any_applied = any(applied.get(w) for w in applied)
         if any_applied:
-            print("\n✅ Fallback 3-letras executado com sucesso (formato legacy)!\n")
+            
             for palavra, tokens in applied.items():
                 if tokens:
                     print(f"  - {palavra}: {len(tokens)} aplicações (tokens: {', '.join(tokens)})")
         else:
-            print("❌ Fallback 3-letras não encontrou nenhuma aplicação.")
+            pass
         return resultado_fallback
 
     # --- Novo formato: per_candidate ---
@@ -1449,17 +1539,21 @@ def executar_fallback_3_letras(fonte: str,
         any_applied = any(info.get("applied_tokens") for info in per_candidate.values())
 
         if any_applied:
-            print("\n✅ Fallback 3-letras executado com sucesso (modo per_candidate)!\n")
+            # modo silencioso por padrão (imprime apenas linhas resumo dos arquivos criados)
             for palavra, info in per_candidate.items():
                 applied_tokens = info.get("applied_tokens", [])
-                if applied_tokens:
-                    print(f"  - {palavra}: {len(applied_tokens)} aplicações (tokens: {', '.join(applied_tokens)})")
+                # em modo não-DEBUG, não imprimimos a lista detalhada por candidate
+                # mas as linhas resumo dos arquivos já foram escritas por _save_step_and_print_stats
+                if DEBUG:
+                    if applied_tokens:
+                        print(f"[DEBUG] {palavra}: {len(applied_tokens)} aplicações (tokens: {', '.join(applied_tokens)})")
         else:
-            print("❌ Nenhuma aplicação foi encontrada no fallback de 3 letras.\n")
+            # se nenhum aplicado, informa sucintamente
+            if DEBUG:
+                print("[DEBUG] ❌ Nenhuma aplicação foi encontrada no fallback de 3 letras.")
         return resultado_fallback
 
     else:
         print("⚠️ Fallback retornou um formato inesperado:")
         print(resultado_fallback)
         return resultado_fallback
-
